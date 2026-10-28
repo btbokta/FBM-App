@@ -26,9 +26,8 @@ Saving all data puts the test users' emails and the 5-minute access token from C
    - Click **Save**.
 
    If a naming dialog opens before you add C1, do the same there.
-3. Check that the **Flow Activation** button on the navigation bar reads **Saving data**. If it reads **Not saving data**, open it and turn on **Save all data that passes through the flow** [SCR-6].
-4. Build C2 to C16 in order. Add each card with **Add function** > *category* > *card*. Inside a branch or section, add cards the same way.
-5. **Save**, work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
+3. Build C2 to C16 in order. Add each card with **Add function** > *category* > *card*. Inside a branch or section, add cards the same way.
+4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
 
 Notation: `←` means drag that output into the field; a value in `code` means type it. Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -44,7 +43,7 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, click **Cl
 | `Attempt` | Number |
 | `User ID` | Text |
 
-Save now (Build steps 2 and 3).
+Save now (Build step 2).
 
 ### C2 Branching – Continue If [FN-7]: connection-account guard
 
@@ -238,6 +237,8 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
 
 These are guide Step 2.5's rules: 2xx and 404 are success, 429 and 5xx are retried, and everything else is a failure, including 400, 401, 403, 422, `0`, and an empty status. The 2xx and 5xx codes are the standard ones listed on Okta's HTTP status codes page.
 
+⚠ UNVERIFIED: that an empty status gives `failure` rather than an error [FN-8]. Lookup's Value is required, and no page says what an empty one does. It matters only if C8.6.2 or C8.10.2 return nothing (U6), and scenario S2 catches that case.
+
 ### C10 Branching – Assign If [FN-9]
 
 - **value a** ← C1.Attempt
@@ -278,7 +279,7 @@ The output you use is **date** (Date & Time).
 
 ### C14 Tables – Create Row [FN-23]
 
-- **Choose Table**: `POC-FBM Logout Results`, then **Choose**. Check all five columns, then **Save** on the card.
+- **Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 - **Time** ← C13.date
 - **User ID** ← C1.User ID
 - **App name** ← C7.output
@@ -360,7 +361,7 @@ Create three fields with **Click or drop to create**:
 | `Outcome` | Text | ← C15.final outcome |
 | `Attempts` | Number | ← C15.attempts |
 
-Save. Then turn the flow on (Build step 5).
+Save. Then turn the flow on (Build step 4).
 
 ## Checklist
 

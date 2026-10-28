@@ -27,9 +27,7 @@ Leave every card's gear > **Error handling** at its defaults [SCR-10].
    - Type the name `POC-ITP FBM – Respond`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-
-   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
-4. Work through the Part A checklist, then switch **Flow is OFF** to ON [SCR-7].
+4. Work through the Part A checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
 
 ### C1 Delegated Flow (event) [EVT-2]
 
@@ -41,7 +39,7 @@ The output you use is **date**.
 
 ### C3 Tables – Create Row [FN-23]
 
-**Choose Table**: `POC-Respond Probe`, then **Choose**. Check all seven columns, then **Save**.
+**Choose Table** > select `POC-Respond Probe` > **Choose**, then **Save** on the card. Check all seven columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |
@@ -153,7 +151,7 @@ Anything but 204 is logged as a failure in C11, and the flow still goes on to th
 
 ### C11 Tables – Create Row
 
-**Choose Table**: `POC-FBM Logout Results`. Check all five columns, then **Save**.
+**Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |
@@ -197,7 +195,7 @@ Add after C12, at the top level:
 
 ### C15 Tables – Create Row
 
-Use `POC-FBM Logout Results`, all five columns:
+**Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |

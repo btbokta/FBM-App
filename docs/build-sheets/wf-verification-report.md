@@ -4,7 +4,7 @@ Prepared 2026-10-27 on branch `wf-sheets-verified`. The sheets were rewritten fr
 
 ## 1. Summary
 
-- **Ledger:** 59 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards), 3 connection types, 13 console screens, 6 platform limits, and 6 API calls, plus 6 KB articles and 1 forum thread used as corroboration.
+- **Ledger:** 61 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards), 3 connection types, 13 console screens, 6 platform limits, and 8 API calls, plus 6 KB articles and 1 forum thread used as corroboration.
 - **Sources:** about 60 pages, fetched as raw text in a browser. Okta's own help pages back every card name and field label in the sheets. Where a page leaves a point open, the sheet says `⚠ UNVERIFIED`, and section 7 lists each one with the task that settles it.
 - **Reviews:** see section 5.
 
@@ -119,7 +119,8 @@ Sample data:
 1. C8.6.1 fails, for example with "Method timeout exceeded" [LIM-6], and the If Error section runs.
 2. ⚠ UNVERIFIED: what the Error object's `code` holds when there's no HTTP status. The expected design behavior assumes `code` is absent:
    - C8.6.2 = null, so C8 status code = null.
-   - C9 gets an empty Value, which matches no row, so `failure`; C12 gives `failure`.
+   - C9 gets an empty Value, which should match no row and give `failure`. ⚠ That assumes Lookup doesn't error on an empty required Value [FN-8].
+   - C12 gives `failure`.
    - **Row (…, POC-FBM-OIDC, empty, failure).** No retry. **Returns empty, failure, 1.**
 3. If `code` instead holds text such as `ETIMEDOUT`, C8.6.2's Number output may fail at runtime [FN-11]. Then this execution errors, and For Each stops before the remaining rows [FN-19].
 4. No PLAN task tests this. See PC3 and PC5.
@@ -169,9 +170,9 @@ Sample data:
 - That's 4 rows and 4 Per App executions. This matches S3: oidc 429 then 204, others 204.
 
 **D-4: the token request fails (not a PLAN scenario).**
-1. The If Error section runs: **Row (POC-AS token, 0, failure)**, and C7 access token = empty.
-2. The `gtr` rows send `Bearer ` with nothing after it. The mock answers 401: **Rows (OIDC, 401, failure) and (SAML, 401, failure)**.
-3. The vendor row still gets 204, a success.
+1. The If Error section runs: **Row (POC-AS token, 0, failure)**, and C7 access token = `unavailable`.
+2. The `gtr` rows send `Bearer unavailable`. The mock's JWT check fails and answers 401: **Rows (OIDC, 401, failure) and (SAML, 401, failure)**.
+3. The vendor row still gets 204, a success. With C6's Sort, the order is OIDC, SAML, Vendor.
 
 **D-5: the connection account.** C1 is `00uWFCONN`, so C2 stops the flow: no Search Rows, no token, no calls, no rows.
 
@@ -264,6 +265,25 @@ The reviewer read about 40 pages, including KB screenshots, and found no fetched
 
 The reviewer also noted that the "Flows and tables" page lists only Flows and Tables tabs for a folder, while Configure a connection documents a folder Connections tab. I fetched it and confirmed. wf-00 now uses the org-level Connections page with Folder Access, which three pages document, and keeps the folder tab as an alternative. The reviewer also confirmed the numeric Caller `id` in KB-1's screenshot, which is added to PC1.
 
+### Round 2: 1 confirmed error (trivial), 9 suspected
+
+The reviewer used about 85 tool calls and found no confirmed errors in card names, categories, labels, types, mappings, scope, or helper and Return contracts. It confirmed one console step was wrong. I fetched every page I relied on for the fixes: [Workflows Console](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-workflowsconsole.htm), [Connections page](https://help.okta.com/wf/en-us/content/topics/workflows/build/view-connections-page.htm), the [Global Token Revocation API](https://developer.okta.com/docs/api/openapi/okta-oauth/oauth/tag/GlobalTokenRevocation/), and [Upsert the user's risk](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserRisk/). The fixes are in the commit "wf sheets: apply review round 2".
+
+| # | Finding | Verdict | Resolution |
+| --- | --- | --- | --- |
+| R2-6 | wf-00 said to "stay on the Flows page", but the Workflows Console opens on its Home page | **Confirmed** | Fixed: wf-00 now says to click Flows. SCR-1 updated, including Home's Usage and plan limits dashboard, which shows the active-flow count |
+| R2-1 | developer.okta.com documents the scopes of the APIs the Okta ITP cards wrap: Global Token Revocation needs `okta.universalLogout.manage`, and Upsert user risk needs `okta.userRisk.manage`. Inside If Error, a missing scope would show only as `gtr status` 0 | Suspected | Fixed: wf-00's read-only scope check now reports both, marked ⚠ because no help page ties them to the cards. Added API-7 and API-8, and ⚠ on ACT-1 and ACT-2. Still U9 |
+| R2-2 | wf-02 C7 claimed the vendor app is still logged out after a token failure. That relied on an empty Assign value and on Concatenate accepting a null | Suspected | Fixed: C7.7 now assigns `unavailable`, so C8.1 never gets a null, and the claim carries ⚠. C6 now sorts by App name, so the row order is fixed |
+| R2-3 | wf-05 C6 and wf-02 B2 stated that an array response sits intact in the Object-typed Body | Suspected | Marked ⚠ in both sheets and in ACT-4; the P10 tasks that use them will show it (V21) |
+| R2-4 | wf-01 C9 called an empty status a failure, but Lookup's Value is required and the empty case isn't documented | Suspected | Marked ⚠ (V20). S2 catches it with U6 |
+| R2-5 | B3.1 and H5.1 are inside If Error, so "Insufficient Scope" never surfaces as a stop. Granting a scope also needs a reauthorization | Suspected | Fixed: the sheet says to open the execution when a sweep row shows `0` `failure`, and to reauthorize `POC-Okta` after any approved scope grant |
+| R2-7 | The Connections page has no health column. It shows Folder Access as a count, plus a Test connection icon | Suspected | Fixed: the checklist checks a Folder Access count of 1 or more, and the report uses **Test connection** for the two Okta connections. SCR-4 updated |
+| R2-8 | Tables cards skipped the first **Save** on the card after **Choose** | Suspected | Fixed on all 10 Tables cards: Choose, Save on the card, check the columns, then Save |
+| R2-9 | Read User may show an Attributes list when added | Suspected | Fixed: wf-04 C3 says to select nothing extra and click Done, marked ⚠. ACT-3 updated |
+| R2-10 | The Flow Activation button and the Flow is OFF toggle are probably one control | Suspected | Fixed: each sheet now has one final step. Open that control, confirm Save all data is on, and switch ON. SCR-6 updated |
+
+The reviewer's other notes (U5, the "User Content" typo on Okta's page, and the Return card's label) need no change, or were already covered.
+
 ## 6. Final pass
 
 To be completed in the next revision of this report.
@@ -291,6 +311,11 @@ To be completed in the next revision of this report.
 | V17 | Whether the Results Date column's export format parses with `Date.parse` (Now gives ISO UTC with `Z`) | wf-01 C14 and others | U20, P11-T2 |
 | V18 | Recursive Per App calls with Wait For under a 25-user burst | wf-01 C15 | U21, P9-T5 |
 | V19 | Which System Log event Global Token Revocation writes | wf-03 C8.1 | U23, P8-T1 |
+| V20 | Whether Lookup returns its Otherwise value or errors on an empty Value | wf-01 C9 | P6-T4 S2, only if U6 leaves the status empty |
+| V21 | That a JSON array from Custom API Action survives in its Object-typed Body | wf-02 Part B per-client B2, wf-05 C6 | P10-T4 and P10-T7, the conditional tasks that run those cards |
+| V22 | What Read User's Attributes list offers when the card is added | wf-04 C3 | P7-T4 build (the builder reports) |
+| V23 | That the Okta ITP cards use `okta.universalLogout.manage` and `okta.userRisk.manage`, the scopes of the APIs they wrap | wf-00 scope check | U9, P8-T1 (and P10-T2 for the risk reset) |
+| V24 | The labels of the Search Rows filter dialog's operator and confirm button | wf-02 C6 | P6-T3 build, P6-T4 S1 |
 
 ## 8. Proposed plan changes
 

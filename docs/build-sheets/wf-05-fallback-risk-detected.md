@@ -22,9 +22,7 @@ The flow starts on the User Risk Detected event. It applies the same conditions 
    - Type the name `POC-ITP FBM – Risk Detected (fallback)`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-
-   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
-4. Work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
+4. Work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -67,7 +65,7 @@ If the card shows a connection or scope warning, stop and tell the executor. The
 - **Request Type**: `GET`
 - **Relative URL** ← C5.output
 
-Its **Body** is the user's groups as a JSON array [API-2], typed Object.
+The API returns the user's groups as a JSON array [API-2], and the card's **Body** is typed Object [ACT-4]. ⚠ UNVERIFIED: that the array arrives intact. C7 and C8 turn it into a typed list, and P10-T7's runs show whether C11 lets the dispatcher run.
 
 ### C7 JSON – Stringify [FN-18]
 
@@ -100,7 +98,7 @@ Its **Body** is the user's groups as a JSON array [API-2], typed Object.
 
 ### C13 Tables – Create Row [FN-23]
 
-**Choose Table**: `POC-FBM Logout Results`. Check all five columns, then **Save**.
+**Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |
@@ -122,7 +120,7 @@ Its **Body** is the user's groups as a JSON array [API-2], typed Object.
 - [ ] C1 is the Okta ITP User Risk Detected event, with `POC-Okta ITP`.
 - [ ] The guards C2, C3, C4, and C11 come before C14. C4 has the real connection-account user ID, and C10 has the real `POC-ITP-Test` group ID.
 - [ ] C14 calls `POC-FBM Logout – Dispatcher`.
-- [ ] The Workflows Console shows 5 flows ON in total.
+- [ ] The Workflows Console **Home** page's **Usage and plan limits** shows 5 active flows [SCR-1].
 
 ## Report to the executor
 

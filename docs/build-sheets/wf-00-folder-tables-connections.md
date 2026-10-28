@@ -7,13 +7,15 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which 
 ## Before you start
 
 1. Sign in to the Admin Console as the **connection account**, `<OKTA_WF_CONNECTION_USER_ID>`. It's the super admin that authorizes the Okta connections, so every rule and flow in the POC refuses it [CON-1, KB-6].
-2. Look at the scopes of the existing **Okta Workflows OAuth** app, without changing anything [SCR-12]: Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Okta API Scopes** tab. Find these three scopes. A granted scope offers **Revoke** and one that isn't granted offers **Grant**; don't click either.
-   - `okta.users.read`: needed by Read User and by the dispatcher's Custom API Action.
-   - `okta.schemas.read`: needed by Read User.
-   - `okta.users.manage`: needed only if P10-T3 adds the token sweep.
+2. Look at the scopes of the existing **Okta Workflows OAuth** app, without changing anything [SCR-12]: Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Okta API Scopes** tab. A granted scope offers **Revoke** and one that isn't granted offers **Grant**; don't click either. Find these five scopes:
+   - `okta.users.read`: needed by Read User and by the dispatcher's Custom API Action [API-6].
+   - `okta.schemas.read`: needed by Read User [API-6].
+   - `okta.users.manage`: needed only if P10-T3 adds the token sweep [API-3].
+   - `okta.universalLogout.manage`: the scope of the API behind Global Token Revocation [API-7]. ⚠ UNVERIFIED that the card uses it (U9).
+   - `okta.userRisk.manage`: the scope of the API behind Upsert User Risk, which only P10-T1 adds [API-8]. ⚠ UNVERIFIED that the card uses it.
 
-   If `okta.users.read` or `okta.schemas.read` isn't granted, stop and tell the executor; granting a scope changes an existing app and needs approval [API-6].
-3. Open Admin Console > **Workflow** > **Workflows console**. Stay on the **Flows** page [SCR-1].
+   If `okta.users.read` or `okta.schemas.read` isn't granted, stop and tell the executor; granting a scope changes an existing app and needs approval. Report the other three either way, so U9 is known before P8-T1.
+3. Open Admin Console > **Workflow** > **Workflows console**. It opens on the **Home** page; click **Flows** to open the Flows page [SCR-1].
 
 ## 1. Folder
 
@@ -148,14 +150,15 @@ Workflows doesn't test API Connector connections when you create them. The first
 - [ ] Folder `POC-ITP-FBM` exists.
 - [ ] `POC-FBM Logout Registry` has 6 columns with the types above and 4 rows, with Enabled true, true, true, false.
 - [ ] `POC-FBM Logout Results` has 5 columns and `POC-Respond Probe` has 7 columns, with the types above. Both are empty.
-- [ ] The Connections page lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode, each with access to folder `POC-ITP-FBM`.
+- [ ] The Connections page lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode. Each shows **Folder Access** of 1 or more, the number of folders it's added to [SCR-4]. Each also has `POC-ITP-FBM` among its folders: check with **Open** > **Assign Folders** if you're unsure.
 - [ ] You typed or pasted a secret only into a connection dialog, never into a table, a card, or the chat.
 
 ## Report to the executor
 
-- Okta Workflows OAuth: which of `okta.users.read`, `okta.schemas.read`, and `okta.users.manage` are granted.
+- Okta Workflows OAuth: which of `okta.users.read`, `okta.schemas.read`, `okta.users.manage`, `okta.universalLogout.manage`, and `okta.userRisk.manage` are granted.
 - Registry: the row count, the Enabled value of each row (U8), and any cell you fixed by hand.
 - Results and Probe: created and empty.
-- Each connection: its name, its connector, and the status it shows. Okta and Okta ITP should show as healthy; API Connector connections aren't tested yet.
+- Each connection: its name, its connector, and its Folder Access count.
+- For `POC-Okta` and `POC-Okta ITP`, click the **Test connection** icon next to each on the Connections page and report the result [SCR-4]. API Connector connections get tested by the first flow runs, in P6-T4.
 - Whether any connection had to be created another way, for example from a card.
 - Anything that didn't match this sheet.

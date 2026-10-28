@@ -28,10 +28,8 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
    - Type the name `POC-FBM Logout – Dispatcher`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-
-   Then check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
 3. Build C2–C8 below.
-4. Save, work through the checklist, then switch **Flow is OFF** to ON [SCR-7]. Wait one minute before the first test run.
+4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. Wait one minute before the first test run.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -68,14 +66,14 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, create one
 ### C6 Tables – Search Rows [FN-22]
 
 1. **Options**:
-   - **Choose Table**: `POC-FBM Logout Registry`, then **Choose**.
+   - **Choose Table** > select `POC-FBM Logout Registry` > **Choose**, then **Save** on the card.
    - **Result Set**: `All matching rows`.
-   - Check all six columns, then **Save** on the card.
-2. **Filter** > **Where Expression**: click **Filter…**. In the dialog, choose the column `Enabled`, the equality operator, and the value `true`. Save the filter.
-3. Leave **Sort**, **Limit**, and **Offset** empty.
+   - Check all six columns, then **Save**.
+2. **Filter** > **Where Expression**: click **Filter…**. In the dialog, choose the column `Enabled`, the equality operator, and the value `true`, then confirm the dialog.
+3. **Sort**: **Column** `App name`, **Direction** Ascending. The rows then run in a fixed order: `POC-FBM-OIDC`, `POC-FBM-SAML`, `POC-Mock-Vendor`. Leave **Limit** and **Offset** empty.
 4. The output you use is **Rows**, the list under **Result**. Each item is one registry row: the six column values plus `Row ID`, `Created`, and `Updated` [FN-22].
 
-> ⚠ UNVERIFIED (U7): the filter dialog's operator label for a Boolean column, and the row object's shape. Scenario S1 catches both: the disabled canary row must get no call, and you paste one row object.
+> ⚠ UNVERIFIED (U7): the filter dialog's operator and button labels for a Boolean column, and the row object's shape. Scenario S1 catches both: the disabled canary row must get no call, and you paste one row object.
 
 ### C7 Error Handling – If Error [FN-10]: get the logout token
 
@@ -105,18 +103,18 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, create one
     - **output**: Text.
 - **If Error** section (use the dropdown at the top of C7):
   - **C7.5 Date & Time – Now** [FN-16]
-  - **C7.6 Tables – Create Row** [FN-23]: **Choose Table** `POC-FBM Logout Results`, check all five columns, **Save**.
+  - **C7.6 Tables – Create Row** [FN-23]: **Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
     - **Time** ← C7.5.date
     - **User ID** ← C1.User ID
     - **App name**: `POC-AS token`
     - **Status code**: `0`
     - **Outcome**: `failure`
-  - **C7.7 Flow Control – Assign** [FN-3]: create one input, `access token`, type Text, and leave its value empty.
+  - **C7.7 Flow Control – Assign** [FN-3]: create one input, `access token`, type Text, value `unavailable`.
 - **View Outputs** on C7: add `access token`, type Text.
   - Try field ← C7.4.output
   - If Error field ← C7.7.access token
 
-If the token request fails, the dispatcher still calls every app. The `gtr` apps then answer 401 (failure rows), and the vendor app, which uses its own connection, is still logged out.
+If the token request fails, the dispatcher still calls every app. The `gtr` apps get `Bearer unavailable` and answer 401, which gives failure rows. The vendor app uses its own connection, so it's still logged out. ⚠ UNVERIFIED: that a 401 is caught like any other error status (U6, the same path S2 tests). If a Per App execution fails instead, For Each skips the rows after it [FN-19].
 
 ### C8 List – For Each [FN-19]
 
@@ -208,14 +206,14 @@ This makes the same call the T5 sweep probe proved [API-3]. Add after C8:
 
 **B5 Date & Time – Now**
 
-**B6 Tables – Create Row** (`POC-FBM Logout Results`, all five columns):
+**B6 Tables – Create Row**: **Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 - **Time** ← B5.date
 - **User ID** ← C1.User ID
 - **App name**: `Okta token sweep`
 - **Status code** ← B3.status
 - **Outcome** ← B4.Result
 
-This call needs scope `okta.users.manage` granted in the Okta Workflows OAuth app [API-6]. It also clears the user's remembered factors, because `forgetDevices` defaults to true [API-3]. If B3.1 fails with Insufficient Scope, stop and tell the executor; granting scopes changes an existing app and needs approval.
+This call needs scope `okta.users.manage` granted in the Okta Workflows OAuth app [API-6]. It also clears the user's remembered factors, because `forgetDevices` defaults to true [API-3]. B3 catches B3.1's errors, so a missing scope shows up only as a `0` `failure` sweep row. If you see that row, open the execution and read B3.1's error. If it says Insufficient Scope, stop and tell the executor: granting the scope changes an existing app and needs approval, and `POC-Okta` must then be reauthorized to pick it up [CON-1].
 
 Checklist: B1–B6 come after C8, the flow is saved, and it's still ON.
 
@@ -234,11 +232,11 @@ With Per App, Dispatcher, Respond, and Respond by Email on, this helper would be
      - View Outputs: `status` (Number), Try ← H5.1.Status Code, If Error ← H5.2.sweep status.
    - **H6 Branching – Lookup**: **Value** ← H5.status; `204` → `success`; Otherwise `failure`.
    - **H7 Date & Time – Now**.
-   - **H8 Tables – Create Row** (`POC-FBM Logout Results`): Time ← H7.date; User ID ← H1.User ID; App name `Okta token sweep`; Status code ← H5.status; Outcome ← H6.Result.
+   - **H8 Tables – Create Row**: choose `POC-FBM Logout Results` and its five columns as in B6; Time ← H7.date; User ID ← H1.User ID; App name `Okta token sweep`; Status code ← H5.status; Outcome ← H6.Result.
    - Save and turn the flow ON.
 2. In the dispatcher, after C8:
    - **B1 Text – Concatenate**: `/api/v1/users/`, ← C1.User ID, `/clients`.
-   - **B2 Okta – Custom API Action** (`POC-Okta`): `GET`, **Relative URL** ← B1.output. Its Body is a JSON array [API-4], typed Object [ACT-4].
+   - **B2 Okta – Custom API Action** (`POC-Okta`): `GET`, **Relative URL** ← B1.output. The API returns a JSON array [API-4], and the card's Body is typed Object [ACT-4]. ⚠ UNVERIFIED: that the array arrives intact. B3 and B4 turn it into a typed list, and P10-T4 shows whether the sweep rows appear.
    - **B3 JSON – Stringify**: **object** ← B2.Body.
    - **B4 JSON – Parse**: **string** ← B3.output; output type **List of Objects** [FN-17].
    - **B5 List – For Each**: list ← B4.output; Helper Flow `POC-FBM Token Sweep – Per Client`; `User ID` ← C1.User ID; `Client` = **item**; concurrency `1`.

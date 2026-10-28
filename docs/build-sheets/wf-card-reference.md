@@ -71,13 +71,18 @@ Every card, event, connector action, connection type, console screen, and platfo
 | API-4 | `GET /api/v1/users/{userId}/clients` | Okta Management API | ✅ |
 | API-5 | `DELETE /api/v1/users/{userId}/clients/{clientId}/tokens` | Okta Management API | ✅ |
 | API-6 | Scopes the Okta connector cards need | Okta Workflows OAuth app | ✅ |
+| API-7 | `POST /oauth2/v1/global-token-revocation` and its scope | Okta OAuth API | ✅ |
+| API-8 | `PUT /api/v1/users/{userId}/risk` and its scope | Okta Management API | ✅ |
 | KB-1 to KB-6 | Support articles used as corroboration | — | ✅ |
 
 ## Console screens and flow settings
 
 ### SCR-1 Workflows Console
-- **Where:** Admin Console > **Workflow** > **Workflows console**, then the **Flows** tab. The menu reads "Workflow" on the build page and "Workflows" on the delegated-flow page; it's the same menu.
-- **Source:** [Build and test a flow](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-build-a-flow.htm)
+- **Where:** Admin Console > **Workflow** > **Workflows console**. The menu reads "Workflow" on the build page and "Workflows" on the delegated-flow page; it's the same menu.
+- **Behavior relied on:**
+  - The console opens on the **Home** page. Its links go to **Flows** (folders, flows, tables) and **Connections**.
+  - Home's **Usage and plan limits** dashboard shows how many flows are active.
+- **Sources:** [Workflows Console](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-workflowsconsole.htm), [Build and test a flow](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-build-a-flow.htm)
 
 ### SCR-2 Create a top-level folder
 - **Where:** Flows page > the **+** button in the side navigation panel > **Create new folder** dialog.
@@ -105,11 +110,15 @@ Every card, event, connector action, connection type, console screen, and platfo
   - The Okta and Okta ITP authorization pages also start from the Connections page.
 - **Folder-level:** Flows page > select the folder > **Connections** tab > **New Connection**. Only flows in that folder can use these connections.
 - ⚠ UNVERIFIED: whether a folder has a Connections tab at all. The Configure a connection page documents one, but the "Flows and tables" page says a folder shows only two tabs, Flows and Tables. The sheets use the org-level route, which works either way.
+- **The Connections page** (marked Beta release):
+  - Its columns are Application, Name, Description, Created by, Created on, Level, and **Folder Access**, which shows the *number* of folders.
+  - There's no health column. A **Test connection** icon next to each connection tests it.
+  - **Open** > **Actions** offers Edit details, Usage, Reauthorize, and Delete connection.
 - **On a card:**
   - The connection name shows at the top of the card; click it to change the connection.
   - A red icon means the connection isn't working or options are missing; a green check means it's healthy.
   - When you first add a card, the connection you last used for that app is preselected.
-- **Sources:** [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm), [Connections](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-applications-connections.htm), [Flows and tables](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-folder-view.htm), [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm)
+- **Sources:** [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm), [Connections](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-applications-connections.htm), [Connections page](https://help.okta.com/wf/en-us/content/topics/workflows/build/view-connections-page.htm), [Flows and tables](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-folder-view.htm), [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm)
 
 ### SCR-5 New flow, naming, saving
 - **Where:** in a folder, **+ New Flow**.
@@ -124,7 +133,8 @@ Every card, event, connector action, connection type, console screen, and platfo
 ### SCR-6 Save all data that passes through the flow
 - **New flow:** in the **Save flow** dialog, turn on **Save all data that passes through the flow**. The tutorial calls it **Save All Data** in the same dialog where you name the flow.
 - **Existing flow:** open the flow options with the **Flow Activation** button on the navigation bar and toggle the same option. The button then reads **Saving data** (or **Not saving data**). The ITP page offers the same choice when you toggle the flow on.
-- The sheets set it in the first Save dialog, then check the Flow Activation button. If it reads Not saving data, they turn it on there.
+- The ITP page says clicking **Flow is OFF** gives both the ON toggle and the save-all-data choice. So the Flow Activation button is most likely the same control as **Flow is OFF / ON** [SCR-7].
+- The sheets set the option in the first Save dialog. At the end, the builder opens that control, confirms the option is on, and switches the flow ON.
 - **Behavior relied on:**
   - Without it, Execution History keeps only metadata such as status and times. With it, you can open an execution and see every card's input and output values.
   - Saved data is kept 30 days.
@@ -291,6 +301,8 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Behavior relied on:**
   - The card is the Workflows equivalent of a full Universal Logout.
   - KB-3 says to map the user ID into the card's User ID field.
+  - The card's description matches the API operation `POST /oauth2/v1/global-token-revocation`. That operation needs scope `okta.universalLogout.manage` and uses the opaque format for Okta user IDs [API-7].
+- ⚠ UNVERIFIED (U9): that the card uses that scope through the Okta ITP connection. No Okta ITP scope page exists.
 - ⚠ UNVERIFIED: how the card presents the opaque/iss_sub choice. The input table has Format and Protocol columns and marks ID, ISS, and SUB all required, which suggests the card asks for a format first. The sheets say: choose the ID (opaque) format, and stop if ISS or SUB still show as required.
 - ⚠ UNVERIFIED: whether a non-2xx response makes the card error. The sheets wrap it in If Error either way.
 - **Sources:** [Global Token Revocation](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/globaltokenrevocation.htm), [Okta ITP connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/oktaitp.htm), [KB-3](https://support.okta.com/help/s/article/how-to-perform-universal-logout-using-workflows)
@@ -299,6 +311,8 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Where:** **Add app action** > **Okta ITP** > **Upsert User Risk**.
 - **Inputs:** **User > ID** (Text, required) and **Risk Level** (Dropdown: `Low`, `High`; required).
 - **Outputs:** **User > Risk Level** (Text) and **Reason** (Text).
+- **Behavior relied on:** the matching API operation, `PUT /api/v1/users/{userId}/risk`, needs scope `okta.userRisk.manage` [API-8].
+- ⚠ UNVERIFIED: that the card uses that scope.
 - **Source:** [Upsert User Risk](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/upsertuserrisk.htm)
 
 ### ACT-3 Okta – Read User
@@ -308,7 +322,9 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Behavior relied on:**
   - It needs scopes `okta.users.read` and `okta.schemas.read` [API-6].
   - Reading an app user returns 404.
-- **Source:** [Read User](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/actions/readuser.htm)
+  - Custom profile properties are generated when you configure the card. In Okta's tutorial, adding Read User shows an **Attributes** list, where you select attributes and click **Done**.
+- ⚠ UNVERIFIED: which attributes that list offers. The sheets need only **System Properties > ID**, which is a system property.
+- **Sources:** [Read User](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/actions/readuser.htm), [Build a user creation flow (tutorial)](https://help.okta.com/wf/en-us/content/topics/workflows/tutorials/timebasedactions-walkthrough/build-user-creation-flow.htm)
 
 ### ACT-4 Okta – Custom API Action
 - **Where:** **Add app action** > **Okta** > **Custom API Action**.
@@ -321,8 +337,9 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Outputs:** **Response > Status Code** (Number), **Headers** (Object), **Body** (Object).
 - **Behavior relied on:**
   - It needs whatever scopes the called endpoint needs [API-6].
-  - Body is typed Object even when the API returns a JSON array. The sheets convert it with JSON – Stringify and JSON – Parse before list cards [FN-17, FN-18].
+  - Body is typed Object. The sheets convert it with JSON – Stringify and JSON – Parse before list cards [FN-17, FN-18].
 - ⚠ UNVERIFIED: whether a non-2xx response makes the card error.
+- ⚠ UNVERIFIED: that an API returning a JSON array (groups, clients) comes through intact in the Object-typed Body. Stringify accepts any JSON type, but no page shows an array in this output. It's used only in the conditional P10 variants (wf-02 Part B per-client, wf-05).
 - **Source:** [Custom API Action](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/actions/httprequest.htm)
 
 ## Function cards
@@ -395,6 +412,7 @@ Categories and card names were checked against the [function reference](https://
 - **Behavior relied on:**
   - Only an exact match counts; anything else gives the Otherwise value.
   - A Number dragged into **Value** is converted to text [SCR-13], so `204` matches a row typed `204`.
+- ⚠ UNVERIFIED: what happens when **Value**, a required field, arrives empty or null. It may give the Otherwise value, or it may error.
 - **Source:** [Lookup](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_lookup.htm)
 
 ### FN-9 Branching – Assign If
@@ -588,6 +606,8 @@ Categories and card names were checked against the [function reference](https://
 | API-4 | `GET /api/v1/users/{userId}/clients` | `okta.users.read` | 200; JSON array of clients, each with `client_id` | [User Resources](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserResources/) |
 | API-5 | `DELETE /api/v1/users/{userId}/clients/{clientId}/tokens` | `okta.users.manage` | 204; revokes all refresh tokens for that user and client | [User OAuth 2.0 Token Management](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserOAuth/) |
 | API-6 | Okta connector card scopes | Read User: `okta.users.read`, `okta.schemas.read`. Custom API Action: whatever the endpoint needs. Event cards: `okta.eventHooks.manage` | Default scopes `address`, `email`, `groups`, `offline_access`, `openid`, `phone`, and `profile` are always granted | [Scopes for Okta connector cards](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/scopes.htm) |
+| API-7 | `POST /oauth2/v1/global-token-revocation` (the API behind ACT-1) | `okta.universalLogout.manage` | Revokes all tokens and sessions for the user in `sub_id`; use the `opaque` format for Okta user IDs | [Global Token Revocation API](https://developer.okta.com/docs/api/openapi/okta-oauth/oauth/tag/GlobalTokenRevocation/) |
+| API-8 | `PUT /api/v1/users/{userId}/risk` (the API behind ACT-2) | `okta.userRisk.manage` | Body `riskLevel` (`HIGH`, `MEDIUM`, `LOW`) | [User Risk](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserRisk/) |
 
 ## Support articles and forums (rank 3 and 4)
 

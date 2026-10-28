@@ -20,9 +20,7 @@ This flow is the guide's `ITP FBM – Respond by Email` (guide Step 6, the optio
    - Type the name `POC-ITP FBM – Respond by Email`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-
-   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
-4. Work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
+4. Work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -41,6 +39,7 @@ Click **Add Event** > **Delegated Flow**. Under **Inputs**, create one field: `E
 - **Connection**: `POC-Okta`
 - **ID or Login** ← C1.Inputs > Email
 - The output you use is **System Properties > ID**.
+- If the card shows an **Attributes** list when you add it, select nothing extra and click **Done**. The ID is a system property. ⚠ UNVERIFIED: what the list offers [ACT-3].
 
 POC users' login equals their email (U27, settled by P8-T4 T4b). An email that matches no user makes the card fail, and the flow stops before C5.
 
@@ -74,7 +73,7 @@ POC users' login equals their email (U27, settled by P8-T4 T4b). An email that m
 
 ### C8 Tables – Create Row [FN-23]
 
-**Choose Table**: `POC-FBM Logout Results`. Check all five columns, then **Save**.
+**Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |
