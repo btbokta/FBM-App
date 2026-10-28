@@ -1,101 +1,147 @@
 # wf-00 Workflows folder, tables, and connections (P6-T1)
 
-Do this in the Workflows Console: Admin Console > Workflows > Workflows console. Sources: [Create a table](https://help.okta.com/wf/en-us/Content/Topics/Workflows/build/create-table.htm), [Import from CSV](https://help.okta.com/wf/en-us/content/topics/workflows/build/import-from-csv.htm), [API Connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_authorization.htm), [Okta ITP connection](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/overviews/authorization.htm).
+You'll create the folder `POC-ITP-FBM`, its three tables, and the five connections the flows use. Every console label comes from the ledger, [wf-card-reference.md](wf-card-reference.md); IDs in square brackets point to its entries.
 
-Sign in to Workflows as the **connection account** (`OKTA_WF_CONNECTION_USER_ID`) so the Okta connections are authorized by that account.
+Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which one of `POC-AS Token (Basic)` or `POC-Mock GTR Static (Custom Header)` you create.
+
+## Before you start
+
+1. Sign in to the Admin Console as the **connection account**, `<OKTA_WF_CONNECTION_USER_ID>`. It's the super admin that authorizes the Okta connections, so every rule and flow in the POC refuses it [CON-1, KB-6].
+2. Open Admin Console > **Workflow** > **Workflows console**. Stay on the **Flows** page [SCR-1].
 
 ## 1. Folder
 
-1. Flows > Folders > **+** (new folder). Name: `POC-ITP-FBM`. Save.
+1. On the Flows page, click the **+** button in the side navigation panel [SCR-2].
+2. In the **Create new folder** dialog:
+   - Name: `POC-ITP-FBM`.
+   - Description: `POC: ITP FBM logout`.
+3. Click **Save**.
 
 ## 2. Tables
 
-In folder `POC-ITP-FBM`, open the **Tables** tab and click **+ New Table** for each table below. Add columns with **+ New Column**, using exactly these names and types.
+Select folder `POC-ITP-FBM` and open its **Tables** tab [SCR-3]. For each table below:
+
+1. Click **+ New Table** (top right).
+2. Type the table name exactly, and leave the description empty.
+3. Click **+ New Column** once per row of the table below. Type the column name exactly, choose the type, and confirm.
 
 ### `POC-FBM Logout Registry`
 
 | Column | Type |
 | --- | --- |
-| App name | String |
-| App instance ID | String |
-| Method | String |
-| Endpoint or API | String |
-| Identifier attribute | String |
-| Enabled | Boolean |
+| `App name` | String |
+| `App instance ID` | String |
+| `Method` | String |
+| `Endpoint or API` | String |
+| `Identifier attribute` | String |
+| `Enabled` | Boolean |
 
-Then **Import** > Choose CSV File > `tables/poc-fbm-logout-registry.csv` from the repo. In the mapping step, check each CSV field maps to the column with the same name. Click **Import**.
+Then import the rows:
 
-Expected: 4 rows. `POC-FBM-OIDC`, `POC-FBM-SAML`, `POC-Mock-Vendor` have Enabled = true; `POC-Disabled-Canary` has Enabled = false. **Report what Enabled shows for each row** (this settles U8). If Enabled imported as empty or text, set the four values by hand in the table view and tell the executor.
+1. Click **Import**. The **Import Data** dialog opens.
+2. Click **Choose CSV File** and pick `tables/poc-fbm-logout-registry.csv` from the repo.
+3. For each CSV field, check that the table column with the same name is selected. It's the default when the names match.
+4. Click **Import**.
+
+Expected: 4 rows.
+- `POC-FBM-OIDC`, `POC-FBM-SAML`, and `POC-Mock-Vendor` show Enabled = true.
+- `POC-Disabled-Canary` shows Enabled = false.
+
+**Report what Enabled shows for each row**; this settles U8. If a value is empty or wrong, click the cell, set it by hand [SCR-3], and say which rows you fixed.
 
 ### `POC-FBM Logout Results`
 
 | Column | Type |
 | --- | --- |
-| Time | Date |
-| User ID | String |
-| App name | String |
-| Status code | Number |
-| Outcome | String |
+| `Time` | Date |
+| `User ID` | String |
+| `App name` | String |
+| `Status code` | Number |
+| `Outcome` | String |
 
-Leave it empty. (`tables/poc-fbm-logout-results.csv` is the header for reference only.)
+Leave it empty. `tables/poc-fbm-logout-results.csv` holds only the header, for reference.
 
 ### `POC-Respond Probe`
 
 | Column | Type |
 | --- | --- |
-| Time | Date |
-| Input User ID | String |
-| Okta User ID | String |
-| Caller ID | String |
-| Caller Type | String |
-| Caller Display Name | String |
-| Caller Alternate ID | String |
+| `Time` | Date |
+| `Input User ID` | String |
+| `Okta User ID` | String |
+| `Caller ID` | String |
+| `Caller Type` | String |
+| `Caller Display Name` | String |
+| `Caller Alternate ID` | String |
 
 Leave it empty.
 
 ## 3. Connections
 
-Open the **Connections** page and click **+ New Connection** for each connection below.
+Create every connection **from the folder**, so the folder's flows can use it [SCR-4]: folder `POC-ITP-FBM` > **Connections** tab > **New Connection** > click the connector's icon. Don't create them on the org-level Connections page. A connection created there can't be used in a folder until it's added to one.
 
-### `POC-Okta` (Okta connector)
+| Connection | Connector | Auth type | Create when |
+| --- | --- | --- | --- |
+| `POC-Okta` | Okta | (OAuth, Okta Workflows OAuth app) | always |
+| `POC-Okta ITP` | Okta ITP | (OAuth, Okta Workflows OAuth app) | always |
+| `POC-API None` | API Connector | None | always |
+| `POC-Mock Vendor (Custom Header)` | API Connector | Custom Header | always |
+| `POC-AS Token (Basic)` | API Connector | Basic | `GTR_AUTH_MODE=oauth` |
+| `POC-Mock GTR Static (Custom Header)` | API Connector | Custom Header | `GTR_AUTH_MODE=static` |
 
-1. Get the client credentials from the **existing** app, without changing anything there: Admin Console > Applications > Applications > `Okta Workflows OAuth` > General > Client Credentials.
-2. Fill in:
-   - Connection Nickname: `POC-Okta`
-   - Domain: `<org subdomain>.oktapreview.com` (no `https://`, no `-admin`)
-   - Client ID and Client Secret: from step 1
-3. Permissions: **Use default scopes**.
-4. Create, then authorize as the connection account.
+### `POC-Okta` (Okta connector) [CON-1]
 
-### `POC-Okta ITP` (Okta ITP connector)
+1. In a second tab, read the client credentials from the **existing** Okta Workflows OAuth app, without changing anything there [SCR-12]: Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Sign On** tab > **Client ID** and **Client secret**. Copy them straight into the dialog below; they never go into the repo or the chat.
+2. In the folder's Connections tab: **New Connection** > **Okta**.
+3. In the New Connection window:
+   - **Connection Nickname**: `POC-Okta`.
+   - **Domain**: `<org subdomain>.oktapreview.com`, with no `https://` and no `-admin`.
+   - **Client ID** and **Client Secret**: paste them from step 1.
+4. On the **Permissions** tab, choose **Use default scopes**.
+5. Click **Create**. If Okta asks you to sign in, sign in as the connection account.
 
-Same fields as `POC-Okta`, with Connection Nickname `POC-Okta ITP` and **Use default scopes**.
+If creation fails with an authorization error, the connection account may not be assigned to the Okta Workflows OAuth app [SCR-12]. Stop and tell the executor; assigning it changes an existing app and needs approval.
 
-### `POC-API None` (API Connector)
+### `POC-Okta ITP` (Okta ITP connector) [CON-2]
 
-Auth Type: **None**. Nickname `POC-API None`.
+Repeat the `POC-Okta` steps with **New Connection** > **Okta ITP**, Connection Nickname `POC-Okta ITP`, the same Domain, Client ID, and Client Secret, and **Use default scopes**.
 
-### `POC-AS Token (Basic)` (API Connector), only when `GTR_AUTH_MODE=oauth`
+### API Connector connections [CON-3]
 
-- Auth Type: **Basic**. Nickname `POC-AS Token (Basic)`.
-- Username: run `npm run secret:copy -- tf:dispatcher_client_id`, then paste.
-- Password: run `npm run secret:copy -- tf:dispatcher_client_secret`, then paste.
+For each connection below:
 
-### `POC-Mock GTR Static (Custom Header)` (API Connector), only when `GTR_AUTH_MODE=static`
+1. Click **New Connection** > **API Connector**.
+2. Enter the nickname.
+3. Choose the auth type from the dropdown.
+4. Fill in its values and click **Create**.
 
-- Auth Type: **Custom**. Nickname `POC-Mock GTR Static (Custom Header)`.
-- Header Name: `Authorization`.
-- Header Value: run `npm run secret:copy -- bearer:MOCK_GTR_STATIC_BEARER`, then paste (it already starts with `Bearer `).
+If the selector has no **API Connector** icon, skip these three for now. Create each one later from the **+ New Connection** button on the first Raw Request card that uses it, with the same values. That card is in wf-01 for `POC-API None`, `POC-Mock Vendor (Custom Header)`, and `POC-Mock GTR Static (Custom Header)`, and in wf-02 for `POC-AS Token (Basic)`. Tell the executor.
 
-### `POC-Mock Vendor (Custom Header)` (API Connector)
+- **`POC-API None`**: auth type **None**. No values.
+- **`POC-Mock Vendor (Custom Header)`**: auth type **Custom Header**; the page also calls it **Custom**, so pick whichever exists.
+  - **Header Name**: `X-API-Key`.
+  - **Header Value**: run `npm run secret:copy -- MOCK_VENDOR_API_KEY`, then paste.
+- **`POC-AS Token (Basic)`**, only when `GTR_AUTH_MODE=oauth`: auth type **Basic**.
+  - **Username**: run `npm run secret:copy -- tf:dispatcher_client_id`, then paste.
+  - **Password**: run `npm run secret:copy -- tf:dispatcher_client_secret`, then paste.
+  - Workflows sends these as `Authorization: Basic …`, which is the `client_secret_basic` method the dispatcher client uses (U11).
+- **`POC-Mock GTR Static (Custom Header)`**, only when `GTR_AUTH_MODE=static`: auth type **Custom Header**.
+  - **Header Name**: `Authorization`.
+  - **Header Value**: run `npm run secret:copy -- bearer:MOCK_GTR_STATIC_BEARER`, then paste. The copied value already starts with `Bearer `.
 
-- Auth Type: **Custom**. Nickname `POC-Mock Vendor (Custom Header)`.
-- Header Name: `X-API-Key`.
-- Header Value: run `npm run secret:copy -- MOCK_VENDOR_API_KEY`, then paste.
+Workflows doesn't test API Connector connections when you create them. The first flow runs test them, in P6-T4.
+
+## Checklist
+
+- [ ] Folder `POC-ITP-FBM` exists.
+- [ ] `POC-FBM Logout Registry` has 6 columns with the types above and 4 rows, with Enabled true, true, true, false.
+- [ ] `POC-FBM Logout Results` has 5 columns and `POC-Respond Probe` has 7 columns, with the types above. Both are empty.
+- [ ] The folder's Connections tab lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode.
+- [ ] You typed or pasted a secret only into a connection dialog, never into a table, a card, or the chat.
 
 ## Report to the executor
 
-- Registry: row count and Enabled values.
-- Results and Probe: created, empty.
-- Each connection's name and whether it shows as connected.
+- Registry: the row count, the Enabled value of each row (U8), and any cell you fixed by hand.
+- Results and Probe: created and empty.
+- Each connection: its name, its connector, and the status it shows. Okta and Okta ITP should show as healthy; API Connector connections aren't tested yet.
+- Whether any connection had to be created another way, for example from a card.
 - Anything that didn't match this sheet.
