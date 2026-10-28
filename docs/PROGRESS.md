@@ -13,8 +13,8 @@ Status values: `todo`, `in_progress`, `done`, `blocked`, `skipped`. Update only 
 | P1-T4 | Vercel token and plan | HUMAN | P0-T3 | todo |  |
 | P2-T1 | Scaffold mock app, config, and store | AUTO | P0-T1 | done | 2026-10-28: mock-app ci, typecheck, 22 tests pass (contract suite on MemoryStore, NullStore, healthz, config). RedisStore is written but not exercised until Upstash is attached (P2-T6/P2-T7) |
 | P2-T2 | Global Token Revocation endpoint and token validation | AUTO | P2-T1 | done | 2026-10-28: 60 mock-app tests pass, 38 in gtr.test.ts (plan asks 18). Covers 204/400/401/403/404/422/429-first, iss_sub, static mode, Okta signed-JWT stub, call recording. Commit c-P2-T2 |
-| P2-T3 | Vendor-style revoke endpoint and test API | AUTO | P2-T2 | in_progress |  |
-| P2-T4 | OIDC sign-in with PKCE and the refresh test endpoint | AUTO | P2-T3 | todo |  |
+| P2-T3 | Vendor-style revoke endpoint and test API | AUTO | P2-T2 | done | 2026-10-28: 82 mock-app tests pass (22 new, plan asks 12): vendor 204/401/400/404/422/500-once, every /test route 401 without key, seed/sessions/faults/calls/tokens/reset. /test/refresh is a 501 placeholder until P2-T4 |
+| P2-T4 | OIDC sign-in with PKCE and the refresh test endpoint | AUTO | P2-T3 | in_progress |  |
 | P2-T5 | Vercel project and first production deploy | AUTO | P2-T4, P1-T4 | todo |  |
 | P2-T6 | Install Upstash Redis on the project | HUMAN | P2-T5 | todo |  |
 | P2-T7 | Redeploy and smoke-test the mock app | AUTO | P2-T6 | todo |  |

@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import { z } from "zod";
 import type { AppDeps } from "./app.js";
 import { validateApiKey } from "./auth.js";
+import type { OidcClient } from "./oidc.js";
 import { APP_KEYS, type AppKey } from "./store.js";
 
 const appSchema = z.enum(APP_KEYS as [AppKey, ...AppKey[]]);
@@ -15,7 +16,7 @@ const faultSchema = z.object({
 const refreshSchema = z.object({ email: z.string().includes("@"), as: z.enum(["custom", "org"]) });
 
 /** Harness-only API, behind X-Test-Key. It never returns a token value. */
-export function registerTestApi(app: Hono, deps: AppDeps): void {
+export function registerTestApi(app: Hono, deps: AppDeps, oidc: OidcClient): void {
   app.use("/test/*", async (c, next) => {
     const auth = validateApiKey(c.req.header("x-test-key"), deps.config.TEST_API_KEY);
     if (auth.outcome !== "ok") return c.json({ error: "unauthorized" }, 401);
@@ -75,8 +76,7 @@ export function registerTestApi(app: Hono, deps: AppDeps): void {
   app.post("/test/refresh", async (c) => {
     const parsed = refreshSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "bad_request" }, 400);
-    // Finished in P2-T4, which adds the token exchange against the issuer.
-    return c.json({ error: "not_implemented" }, 501);
+    return c.json(await oidc.refresh(parsed.data.email, parsed.data.as));
   });
 
   app.post("/test/reset", async (c) => {

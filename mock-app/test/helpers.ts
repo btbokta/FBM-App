@@ -77,7 +77,11 @@ export interface Harness {
   clock: { ms: number };
 }
 
-export async function makeHarness(env: Record<string, string> = {}, key?: KeyMaterial): Promise<Harness> {
+export async function makeHarness(
+  env: Record<string, string> = {},
+  key?: KeyMaterial,
+  fetchFn: typeof fetch = fetch,
+): Promise<Harness> {
   const material = key ?? (await makeKey());
   const clock = { ms: NOW_MS };
   const store = new MemoryStore(() => clock.ms);
@@ -85,7 +89,7 @@ export async function makeHarness(env: Record<string, string> = {}, key?: KeyMat
     config: loadConfig({ ...BASE_ENV, ...env }),
     store,
     now: () => clock.ms,
-    fetchFn: fetch,
+    fetchFn,
     jwksFor: () => material.jwks,
   };
   return { app: createApp(deps), store, key: material, deps, clock };

@@ -144,10 +144,12 @@ describe("tokens, refresh, reset", () => {
     expect(text).not.toContain("rt-super-secret");
   });
 
-  it("refresh validates its body, then answers 501 until P2-T4 implements it", async () => {
+  it("refresh validates its body and reports no_token when nothing was escrowed", async () => {
     expect((await api("POST", "/test/refresh", { email: "bad", as: "custom" })).status).toBe(400);
     expect((await api("POST", "/test/refresh", { email: A, as: "other" })).status).toBe(400);
-    expect((await api("POST", "/test/refresh", { email: A, as: "custom" })).status).toBe(501);
+    const res = await api("POST", "/test/refresh", { email: A, as: "custom" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: 0, error: "no_token" });
   });
 
   it("reset empties the store", async () => {

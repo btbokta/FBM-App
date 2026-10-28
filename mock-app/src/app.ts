@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { JWTVerifyGetKey } from "jose";
 import { isAsConfigured, isOidcConfigured, type Config } from "./config.js";
 import { registerGtrRoutes } from "./gtr.js";
+import { createOidcClient, registerOidcRoutes } from "./oidc.js";
 import { StoreMissingError, type Store } from "./store.js";
 import { registerTestApi } from "./test-api.js";
 import { registerVendorRoutes } from "./vendor.js";
@@ -40,9 +41,11 @@ export function createApp(deps: AppDeps): Hono {
     });
   });
 
+  const oidc = createOidcClient(deps);
   registerGtrRoutes(app, deps);
   registerVendorRoutes(app, deps);
-  registerTestApi(app, deps);
+  registerOidcRoutes(app, deps, oidc);
+  registerTestApi(app, deps, oidc);
 
   return app;
 }
