@@ -12,7 +12,7 @@ Status values: `todo`, `in_progress`, `done`, `blocked`, `skipped`. Update only 
 | P1-T3 | Record org facts | VERIFY | P1-T2 | todo |  |
 | P1-T4 | Vercel token and plan | HUMAN | P0-T3 | todo |  |
 | P2-T1 | Scaffold mock app, config, and store | AUTO | P0-T1 | done | 2026-10-28: mock-app ci, typecheck, 22 tests pass (contract suite on MemoryStore, NullStore, healthz, config). RedisStore is written but not exercised until Upstash is attached (P2-T6/P2-T7) |
-| P2-T2 | Global Token Revocation endpoint and token validation | AUTO | P2-T1 | todo |  |
+| P2-T2 | Global Token Revocation endpoint and token validation | AUTO | P2-T1 | in_progress |  |
 | P2-T3 | Vendor-style revoke endpoint and test API | AUTO | P2-T2 | todo |  |
 | P2-T4 | OIDC sign-in with PKCE and the refresh test endpoint | AUTO | P2-T3 | todo |  |
 | P2-T5 | Vercel project and first production deploy | AUTO | P2-T4, P1-T4 | todo |  |
