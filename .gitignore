@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+keys/
+state/
+infra/.terraform/
+infra/*.tfstate*
+.vercel/
+mock-app/.vercel/
+mock-app/.env*
+coverage/
+*.log
+.DS_Store
