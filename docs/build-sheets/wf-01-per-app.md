@@ -1,16 +1,37 @@
 # wf-01 POC-FBM Logout – Per App (P6-T2)
 
-Guide name: `FBM Logout – Per App` (guide Step 2). This helper logs one user out of one registry app, retries 429 and 5xx up to three times by calling itself (decision D-RETRY), writes one Results row per attempt (D-RESULTS), and returns the final status.
+This flow is the guide's `FBM Logout – Per App` (guide Step 2). It logs one user out of one registry app and classifies the response. It retries 429 and 5xx up to three times by calling itself (decision D-RETRY), writes one `POC-FBM Logout Results` row per attempt (D-RESULTS), and returns the final status to its caller. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md); IDs in square brackets point to its entries.
 
-Sources: [Call Flow](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_spawn.htm), [Return](https://help.okta.com/wf/en-us/Content/Topics/Workflows/function-reference/flow-control/flocontrol_return.htm), [Object – Get](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/object/object_get.htm), [If/ElseIf](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_branch.htm), [If Error](https://help.okta.com/wf/en-us/Content/Topics/Workflows/function-reference/Error-Handling/errorhandling_trycatch.htm), [Raw Request](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_raw.htm), [Lookup](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_lookup.htm), [Assign If](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_assignif.htm), [Wait For](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_wait.htm), [Recursion KB](https://support.okta.com/help/s/article/set-up-recursion-in-workflows).
+Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.1, C8.2, and C8.6.1 only.
 
-Create the flow in folder `POC-ITP-FBM` and name it `POC-FBM Logout – Per App`. Save it once before card 14, because card 14 calls this same flow.
+## Flow settings
 
-## Cards
+| Setting | Value |
+| --- | --- |
+| Folder | `POC-ITP-FBM` |
+| Flow name | `POC-FBM Logout – Per App` (en dash) |
+| Kind | Helper flow: its event card is Helper Flow [EVT-1] |
+| Save all data that passes through the flow | On. P6-T4 reads card values from the executions [SCR-6] |
+| First save | Right after C1, so the flow exists when C15.4 has to select it [SCR-8] |
+| Turn on | After the checklist, before you build wf-02 |
 
-**C1 Helper Flow** (event: Add event > Helper Flow). Click or drag to create these inputs:
+Saving all data puts the test users' emails and the 5-minute access token from C1 into execution history, where other Workflows admins can see them [SCR-6]. That's accepted for this POC; see the report.
 
-| Input | Type |
+## Build
+
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5].
+2. Click the pencil icon beside `Unnamed` and type `POC-FBM Logout – Per App`.
+3. Build C1. Then click **Save**. In the **Save flow** dialog, turn on **Save all data that passes through the flow**, and save.
+4. Build C2 to C16 in order. Add each card with **Add function** > *category* > *card*. Inside a branch or section, add cards the same way.
+5. **Save**, work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
+
+Notation: `←` means drag that output into the field; a value in `code` means type it. Leave every card's gear > **Error handling** at its defaults [SCR-10].
+
+### C1 Helper Flow (event) [EVT-1]
+
+Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, click **Click or drag to create** five times and create these fields:
+
+| Name | Type |
 | --- | --- |
 | `Row` | Object |
 | `User profile` | Object |
@@ -18,93 +39,213 @@ Create the flow in folder `POC-ITP-FBM` and name it `POC-FBM Logout – Per App`
 | `Attempt` | Number |
 | `User ID` | Text |
 
-**C2 Object – Get**
-- object ← C1.Row
-- path `Identifier attribute`
-- Rename the output to `identifier key` (Text).
+Save now (Build step 3).
 
-**C3 Object – Get**
-- object ← C1.User profile
-- path ← C2.identifier key
-- Rename the output to `identifier value` (Text).
+### C2 Branching – Continue If [FN-7]: connection-account guard
 
-**C4 Object – Get**
-- object ← C1.Row
-- path `Method`
-- Output `method` (Text).
+- **value a** ← C1.User ID
+- **comparison**: `not equal to`
+- **value b**: `<OKTA_WF_CONNECTION_USER_ID>`
+- **message**: `Refusing to act on the Workflows connection account`
 
-**C5 Object – Get**
-- object ← C1.Row
-- path `Endpoint or API`
-- Output `endpoint` (Text).
+### C3 Object – Get [FN-11]
 
-**C6 Object – Get**
-- object ← C1.Row
-- path `App name`
-- Output `app name` (Text).
+- **object** ← C1.Row
+- **path**: `Identifier attribute`
+- **output**: leave the type Text. It holds the name of the profile attribute the app keys users by, for example `email`.
 
-> Paths in C2 and C4–C6 assume Search Rows returns flat row objects keyed by column name (U7). P6-T4 checks this; if rows are nested (for example under `Fields`), the executor updates these paths and you edit them.
+### C4 Object – Get
 
-**C7 If/ElseIf**
-- Edit Conditions:
-  - Branch 1 is ← C4.method, equal to, `gtr`.
-  - Branch 2 is ← C4.method, equal to, `vendor`.
-  - Keep the Else branch.
-- View Outputs: add `status code` (Number).
+- **object** ← C1.User profile
+- **path** ← C3.output
+- **output**: Text. This is the user's identifier value, for example the email address.
 
-Branch 1 (`gtr`):
-- **C7.1 Text – Concatenate**: `Bearer ` (with the trailing space), then ← C1.Access token. Output `auth header`. *(Static mode: skip C7.1.)*
-- **C7.2 Object – Construct**: key `Authorization` ← C7.1.auth header (static mode: omit this key); key `Content-Type` = `application/json`; key `Accept` = `application/json`. Output `headers`.
-- **C7.3 Text – Compose**: type `{"sub_id":{"format":"email","email":"`, drag in ← C3.identifier value, then type `"}}`. Output `body`.
-- **C7.4 If Error**:
-  - **Try** section: **API Connector – Raw Request**.
-    - Connection: `POC-API None` (oauth mode) or `POC-Mock GTR Static (Custom Header)` (static mode)
-    - URL ← C5.endpoint
-    - Method `POST`
-    - Headers ← C7.2.headers
-    - Query: empty
-    - Body ← C7.3.body
-    - Map the Raw Request output **Status Code** to the If Error output `status`.
-  - **If Error** section: **Object – Get**, object ← the If Error card's error object, path `statusCode`, output `err status` (Number). Map it to the If Error output `status`.
-  - View Outputs on C7.4: `status` (Number).
+### C5 Object – Get
 
-  > Path `statusCode` is the POC default (U6). In scenario S2 the executor asks you to open the failed execution and copy the error object; if the 422 is somewhere else, the executor gives you the path to use here and in C7.8.
-- Map ← C7.4.status to the branch output `status code`.
+- **object** ← C1.Row
+- **path**: `Method`
+- **output**: Text.
 
-Branch 2 (`vendor`):
-- **C7.5 Text – Compose**: type `{"email":"`, drag ← C3.identifier value, type `"}`. Output `body`.
-- **C7.6 Object – Construct**: `Content-Type` = `application/json`, `Accept` = `application/json`. Output `headers`.
-- **C7.7 If Error**: same as C7.4 except the Raw Request connection is `POC-Mock Vendor (Custom Header)`, Headers ← C7.6.headers, Body ← C7.5.body.
-- **C7.8**: the If Error section's Object – Get, same as in C7.4. Map ← C7.7.status to the branch output `status code`.
+### C6 Object – Get
 
-Else branch:
-- **C7.9 Flow Control – Assign**: `status code` = `0`. Map it to the branch output `status code`.
+- **object** ← C1.Row
+- **path**: `Endpoint or API`
+- **output**: Text.
 
-**C8 Lookup** (Value ← C7.status code). Lookup Table:
+### C7 Object – Get
+
+- **object** ← C1.Row
+- **path**: `App name`
+- **output**: Text.
+
+> The paths in C3 and C5–C7 are the registry column names. Okta's KB screenshot shows Search Rows rows as flat objects keyed by column name, with `Row ID`, `Created`, and `Updated` beside them [FN-22]. ⚠ UNVERIFIED (U7): that this org returns the same shape, and that paths containing spaces work. P6-T4 scenario S1 checks both. If the shape differs, the executor gives you new paths for C3 and C5–C7.
+
+### C8 Branching – If/ElseIf [FN-6]
+
+Conditions (**Edit Conditions**):
+1. **value a** ← C5.output; **comparison** `equal to`; **value b** `gtr`.
+2. Add a second condition: **value a** ← C5.output; **comparison** `equal to`; **value b** `vendor`.
+
+Click **View Outputs** (top right) and add one output: `status code`, type Number. It shows one field for condition 1, one for condition 2, and one for Else. You fill each one at the end of its branch, below.
+
+Open a branch with the **+** icon right of its condition, and switch branches with the dropdown at the top left.
+
+#### Branch 1: `gtr`
+
+**C8.1 Text – Concatenate** [FN-13]. **Oauth mode only**; in static mode skip C8.1.
+- **text 1**: `Bearer`
+- **text 2**: a single space
+- **text 3** (click **Click or drop here to create**) ← C1.Access token
+
+**C8.2 Object – Construct** [FN-12]: the request headers. Create these inputs with **Click or drop to create**:
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `Authorization` | Text | ← C8.1.output. **Oauth mode only**; in static mode don't create this input, because the connection adds the header |
+| `Content-Type` | Text | `application/json` |
+| `Accept` | Text | `application/json` |
+
+**C8.3 Object – Construct**: the inner `sub_id` object.
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `format` | Text | `email` |
+| `email` | Text | ← C4.output |
+
+**C8.4 Object – Construct**: the body object.
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `sub_id` | Object | ← C8.3.output |
+
+**C8.5 JSON – Stringify** [FN-18]
+- **object** ← C8.4.output
+- Its **output** (Text) is `{"sub_id":{"format":"email","email":"<user's email>"}}`, the Global Token Revocation body the guide requires.
+
+**C8.6 Error Handling – If Error** [FN-10]
+
+- **Try** section:
+  - **C8.6.1 API Connector – Raw Request** [FN-24]
+    - **Connection** (name at the top of the card; click it to change [SCR-4]): `POC-API None` in oauth mode, `POC-Mock GTR Static (Custom Header)` in static mode.
+    - **URL** ← C6.output
+    - **Method**: `POST`
+    - **Headers** ← C8.2.output
+    - **Query**: leave empty
+    - **Body** ← C8.5.output
+- **If Error** section (use the dropdown at the top of C8.6):
+  - **C8.6.2 Object – Get**
+    - **object** ← the **Error** object of C8.6's If Error section
+    - **path**: `code`
+    - **output**: set the type to Number.
+- **View Outputs** on C8.6: add `status`, type Number.
+  - Try field ← C8.6.1.Status Code
+  - If Error field ← C8.6.2.output
+- Back in C8's outputs pane: the condition 1 field of `status code` ← C8.6.status.
+
+> Okta documents the If Error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. ⚠ UNVERIFIED (U6): whether a non-2xx response makes Raw Request error, and whether `code` then holds the HTTP status. Mapping both sections into `status` covers either behavior. In scenario S2 the executor asks you to paste the error object; if the status is somewhere else, you'll get a new path for C8.6.2 and C8.10.2.
+
+#### Branch 2: `vendor`
+
+**C8.7 Object – Construct**: the body object.
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `email` | Text | ← C4.output |
+
+**C8.8 JSON – Stringify**
+- **object** ← C8.7.output
+- Its **output** is `{"email":"<user's email>"}`.
+
+**C8.9 Object – Construct**: the headers. The connection adds `X-API-Key`.
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `Content-Type` | Text | `application/json` |
+| `Accept` | Text | `application/json` |
+
+**C8.10 Error Handling – If Error**
+
+- **Try** section:
+  - **C8.10.1 API Connector – Raw Request**
+    - **Connection**: `POC-Mock Vendor (Custom Header)`
+    - **URL** ← C6.output
+    - **Method**: `POST`
+    - **Headers** ← C8.9.output
+    - **Query**: leave empty
+    - **Body** ← C8.8.output
+- **If Error** section:
+  - **C8.10.2 Object – Get**
+    - **object** ← the **Error** object of C8.10's If Error section
+    - **path**: `code`
+    - **output**: Number
+- **View Outputs** on C8.10: add `status`, type Number.
+  - Try field ← C8.10.1.Status Code
+  - If Error field ← C8.10.2.output
+- In C8's outputs pane: the condition 2 field of `status code` ← C8.10.status.
+
+#### Else branch
+
+**C8.11 Flow Control – Assign** [FN-3]
+- Create one input: `status code`, type Number, value `0`.
+- In C8's outputs pane: the Else field of `status code` ← C8.11.status code.
+
+### C9 Branching – Lookup [FN-8]: classify the status
+
+- **Value** ← C8.status code (C8's output; it converts to text [SCR-13])
+- **Lookup Table**: click the bottom row to add each row.
 
 | When Value Is | Then Result Is |
 | --- | --- |
 | `200` | `success` |
 | `201` | `success` |
 | `202` | `success` |
+| `203` | `success` |
 | `204` | `success` |
+| `205` | `success` |
+| `206` | `success` |
+| `207` | `success` |
+| `208` | `success` |
+| `226` | `success` |
 | `404` | `success` |
 | `429` | `retry` |
 | `500` | `retry` |
+| `501` | `retry` |
 | `502` | `retry` |
 | `503` | `retry` |
 | `504` | `retry` |
+| `505` | `retry` |
+| `506` | `retry` |
+| `507` | `retry` |
+| `508` | `retry` |
+| `510` | `retry` |
+| `511` | `retry` |
 
-Otherwise Result Is `failure`. Output `classification`.
+- **Otherwise Result Is**: `failure`
+- **Result**: leave the type Text.
 
-**C9 Assign If**
-- value a ← C1.Attempt; comparison greater than or equal; value b `4`
-- value if true `last`; value if false `more`
-- Output `attempt state`.
+These are guide Step 2.5's rules: 2xx and 404 are success, 429 and 5xx are retried, and everything else is a failure, including 400, 401, 403, 422, `0`, and an empty status. The 2xx and 5xx codes are the standard ones listed on Okta's HTTP status codes page.
 
-**C10 Text – Concatenate**: ← C8.classification, `-`, ← C9.attempt state. Output `outcome key`.
+### C10 Branching – Assign If [FN-9]
 
-**C11 Lookup** (Value ← C10.outcome key):
+- **value a** ← C1.Attempt
+- **comparison**: `greater than or equal`
+- **value b**: `4`, with its type set to Number
+- **value if true**: `last`
+- **value if false**: `more`
+- **output**: set the type to Text.
+
+Attempt is always 1 to 4, so the comparison gives the same result as numbers or as text.
+
+### C11 Text – Concatenate
+
+- **text 1** ← C9.Result
+- **text 2**: `-`
+- **text 3** (Click or drop here to create) ← C10.output
+
+### C12 Branching – Lookup: final outcome
+
+- **Value** ← C11.output
+- **Lookup Table**:
 
 | When Value Is | Then Result Is |
 | --- | --- |
@@ -115,43 +256,119 @@ Otherwise Result Is `failure`. Output `classification`.
 | `failure-more` | `failure` |
 | `failure-last` | `failure` |
 
-Otherwise Result Is `failure`. Output `outcome`.
+- **Otherwise Result Is**: `failure`
+- **Result**: Text.
 
-**C12 Date & Time – Now**. Output `now`.
+### C13 Date & Time – Now [FN-16]
 
-**C13 Tables – Create Row**: Table `POC-FBM Logout Results`.
-- Time ← C12.now
-- User ID ← C1.User ID
-- App name ← C6.app name
-- Status code ← C7.status code
-- Outcome ← C11.outcome
+The output you use is **date** (Date & Time).
 
-**C14 If/Else**
-- Condition: value a ← C11.outcome, comparison equal to, value b `retry`.
-- Create Outputs: `final status` (Number), `final outcome` (Text), `attempts` (Number).
+### C14 Tables – Create Row [FN-23]
 
-True branch:
-- **C14.1 Number – Multiply**: ← C1.Attempt × `2`. Output `delay seconds`.
-- **C14.2 Flow Control – Wait For**: delay ← C14.1.delay seconds, unit `second`.
-- **C14.3 Number – Add**: ← C1.Attempt + `1`. Output `next attempt`.
-- **C14.4 Flow Control – Call Flow**: Helper Flow = `POC-FBM Logout – Per App` (this flow).
-  - With these inputs: Row ← C1.Row, User profile ← C1.User profile, Access token ← C1.Access token, Attempt ← C14.3.next attempt, User ID ← C1.User ID.
-  - Create outputs by hand with exactly these names and types: `Status code` (Number), `Outcome` (Text), `Attempts` (Number).
-- Map C14.4 outputs to `final status`, `final outcome`, and `attempts`.
+- **Choose Table**: `POC-FBM Logout Results`, then **Choose**. Check all five columns, then **Save** on the card.
+- **Time** ← C13.date
+- **User ID** ← C1.User ID
+- **App name** ← C7.output
+- **Status code** ← C8.status code
+- **Outcome** ← C12.Result
 
-False branch:
-- Map ← C7.status code to `final status`, ← C11.outcome to `final outcome`, and ← C1.Attempt to `attempts`.
+### C15 Branching – If/Else [FN-5]: retry or finish
 
-**C15 Flow Control – Return**: add fields `Status code` (Number) ← C14.final status, `Outcome` (Text) ← C14.final outcome, `Attempts` (Number) ← C14.attempts.
+- **Condition**: **value a** ← C12.Result; **comparison** `equal to`; **value b** `retry`. Click **Done**.
+- **Create Outputs**:
 
-Save, then turn the flow **ON**.
+| Output | Type |
+| --- | --- |
+| `final status` | Number |
+| `final outcome` | Text |
+| `attempts` | Number |
+
+#### True branch (upper, orange): retry
+
+**C15.1 Number – Multiply** [FN-15]
+- **number 1** ← C1.Attempt
+- **number 2**: `2`
+
+**C15.2 Flow Control – Wait For** [FN-4]
+- **delay** ← C15.1.output
+- **unit**: `second`
+
+**C15.3 Number – Add** [FN-14]
+- **number 1** ← C1.Attempt
+- **number 2**: `1`
+
+**C15.4 Flow Control – Call Flow** [FN-1]
+- **Helper Flow**: **Choose Flow** > `POC-FBM Logout – Per App`, this same flow. It's listed because you saved after C1.
+- **With these inputs**:
+
+| Input | Value |
+| --- | --- |
+| Row | ← C1.Row |
+| User profile | ← C1.User profile |
+| Access token | ← C1.Access token |
+| Attempt | ← C15.3.total |
+| User ID | ← C1.User ID |
+
+- **Outputs**: create three with **Click or drag to create**. They must match C16's fields exactly, in name and type:
+
+| Output | Type |
+| --- | --- |
+| `Status code` | Number |
+| `Outcome` | Text |
+| `Attempts` | Number |
+
+- In C15's outputs, the true values are:
+  - `final status` ← C15.4.Status code
+  - `final outcome` ← C15.4.Outcome
+  - `attempts` ← C15.4.Attempts
+
+#### False branch (lower, blue): finish
+
+**C15.5 Flow Control – Assign**
+
+| Input name | Type | Value |
+| --- | --- | --- |
+| `final status` | Number | ← C8.status code |
+| `final outcome` | Text | ← C12.Result |
+| `attempts` | Number | ← C1.Attempt |
+
+In C15's outputs, the false values are:
+- `final status` ← C15.5.final status
+- `final outcome` ← C15.5.final outcome
+- `attempts` ← C15.5.attempts
+
+### C16 Flow Control – Return [FN-2]
+
+Create three fields with **Click or drop to create**:
+
+| Field | Type | Value |
+| --- | --- | --- |
+| `Status code` | Number | ← C15.final status |
+| `Outcome` | Text | ← C15.final outcome |
+| `Attempts` | Number | ← C15.attempts |
+
+Save. Then turn the flow on (Build step 5).
 
 ## Checklist
 
-- [ ] 15 top-level cards (C1–C15); C7 has 3 branches; C14 has 2 branches
-- [ ] Helper inputs: Row, User profile, Access token, Attempt, User ID
-- [ ] Raw Request in `gtr` uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static); in `vendor` uses `POC-Mock Vendor (Custom Header)`
-- [ ] No secret typed into any card
-- [ ] Call Flow targets this same flow and has outputs Status code, Outcome, Attempts
-- [ ] Return has Status code, Outcome, Attempts
-- [ ] Flow is ON
+- [ ] `POC-FBM Logout – Per App` is in folder `POC-ITP-FBM`. The **Flow Activation** button reads **Saving data**, and the flow is ON.
+- [ ] There are 16 top-level cards, C1–C16.
+  - C8 has three branches (`gtr`, `vendor`, Else) holding C8.1–C8.11.
+  - C8.6 and C8.10 each have a Try card and an If Error card.
+  - C15 has a true branch (C15.1–C15.4) and a false branch (C15.5).
+- [ ] C1 has exactly these inputs: `Row` (Object), `User profile` (Object), `Access token` (Text), `Attempt` (Number), `User ID` (Text).
+- [ ] C2 is the first card after C1, and value b is the real connection-account user ID.
+- [ ] No Continue If or Return card sits inside a branch or section.
+- [ ] C8.6.1 uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.10.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
+- [ ] C8.6 and C8.10 each output `status` (Number), with both the Try and If Error fields filled.
+- [ ] C8 outputs `status code` (Number), with the `gtr`, `vendor`, and Else fields filled.
+- [ ] C9 has 23 rows and Otherwise `failure`. C12 has 6 rows and Otherwise `failure`.
+- [ ] C15.4 calls this flow, with all five inputs mapped and outputs `Status code` (Number), `Outcome` (Text), `Attempts` (Number). C16 returns the same three names and types.
+- [ ] No secret is typed into any card.
+
+## Report to the executor
+
+- The flow is saved, Save all data is on, and the flow is ON.
+- The mode you built (oauth or static), and the connection shown on C8.6.1 and C8.10.1.
+- Whether C15.4's Choose Flow dialog listed this flow.
+- Every card, field, option, or label that looked different from this sheet, with the exact text you saw.
