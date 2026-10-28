@@ -27,7 +27,7 @@ Saving all data puts the test users' emails and the 5-minute access token from C
 
    If a naming dialog opens before you add C1, do the same there.
 3. Build C2 to C16 in order. Add each card with **Add function** > *category* > *card*. Inside a branch or section, add cards the same way.
-4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
+4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder: **Flow is OFF**. Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. ⚠ UNVERIFIED that this is one control. If you find two, turn on saving with the Flow Activation button, and switch ON with the Flow is OFF toggle.
 
 Notation: `←` means drag that output into the field; a value in `code` means type it. Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -139,7 +139,7 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
     - **Body** ← C8.5.output
 - **If Error** section (use the dropdown at the top of C8.6):
   - **C8.6.2 Object – Get**
-    - **object** ← the **Error** object of C8.6's If Error section
+    - **object** ← the **Error** object of C8.6's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
     - **path**: `code`
     - **output**: set the type to Number.
 - **View Outputs** on C8.6: add `status`, type Number.
@@ -147,14 +147,16 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
   - If Error field ← C8.6.2.output
 - Back in C8's outputs pane: the condition 1 field of `status code` ← C8.6.status.
 
-> The If Error page lists the error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. But an Okta KB screenshot shows the object without `code`, and Okta-card errors can wrap the API's status in a 500.
+> The If Error page lists the error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. An Okta KB screenshot shows an API Connector call that got HTTP 500: the card errored into If Error, and the Error object held `code` 500 [KB-7].
 >
-> ⚠ UNVERIFIED (U6): whether a non-2xx response makes Raw Request error, and whether `code` then holds the HTTP status. Mapping both sections into `status` covers both error behaviors. Scenario S2 forces a 422 and shows which case applies:
+> ⚠ UNVERIFIED (U6): that Raw Request behaves the same for a 4xx, so `code` holds 422. Mapping both sections into `status` covers either behavior. Scenario S2 forces a 422 and shows which case applies:
 > - The right path gives one SAML call and one Results row (422, failure).
 > - A wrapping 500 gives four SAML calls ending in `failure-retries-exhausted`.
 > - A missing `code` fails the SAML execution before it writes a row.
 >
 > The executor then gives you the right path for C8.6.2 and C8.10.2.
+>
+> ⚠ UNVERIFIED: a request that fails with no HTTP status at all, such as a timeout, DNS, or TLS failure. If `code` is then missing or not a number, C8.6.2 may fail. The execution would end in an error without a Results row, and the dispatcher would skip the remaining apps [FN-19]. No PLAN task tests this yet; see the report, PA-6 and PC3.
 
 #### Branch 2: `vendor`
 
@@ -187,7 +189,7 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
     - **Body** ← C8.8.output
 - **If Error** section:
   - **C8.10.2 Object – Get**
-    - **object** ← the **Error** object of C8.10's If Error section
+    - **object** ← the **Error** object of C8.10's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
     - **path**: `code`
     - **output**: Number
 - **View Outputs** on C8.10: add `status`, type Number.
@@ -203,7 +205,7 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
 
 ### C9 Branching – Lookup [FN-8]: classify the status
 
-- **Value** ← C8.status code (C8's output; it converts to text [SCR-13])
+- **Value** ← C8.status code (C8's output). A Number should convert to text here [SCR-13]. ⚠ UNVERIFIED: the docs conflict on mapping a Number into this String field. Scenario S3 settles it: a 429 that isn't classified `retry` isn't retried, and S3 fails.
 - **Lookup Table**: click the bottom row to add each row.
 
 | When Value Is | Then Result Is |

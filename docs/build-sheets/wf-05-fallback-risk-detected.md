@@ -22,7 +22,7 @@ The flow starts on the User Risk Detected event. It applies the same conditions 
    - Type the name `POC-ITP FBM – Risk Detected (fallback)`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-4. Work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
+4. Work through the checklist. Then click the activation control at the top of the flow builder: **Flow is OFF**. Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. ⚠ UNVERIFIED that this is one control. If you find two, turn on saving with the Flow Activation button, and switch ON with the Flow is OFF toggle.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -30,7 +30,7 @@ Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
 Click **Add Event** > **Okta ITP** > **User Risk Detected**, with connection `POC-Okta ITP`.
 
-If the card shows a connection or scope warning, stop and tell the executor. The event may need a scope that isn't granted in the Okta Workflows OAuth app [EVT-3], and changing that app needs approval.
+If the card shows a connection or scope warning, stop and tell the executor. Do the same if switching the flow ON fails, or if the console shows an alert naming a connector [LIM-6]. The event may need a scope that isn't granted in the Okta Workflows OAuth app, such as `okta.eventHooks.manage` [EVT-3, API-6], and changing that app needs approval.
 
 ### C2 Branching – Continue If [FN-7]: only High
 

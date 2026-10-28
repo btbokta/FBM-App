@@ -27,7 +27,7 @@ Leave every card's gear > **Error handling** at its defaults [SCR-10].
    - Type the name `POC-ITP FBM – Respond`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-4. Work through the Part A checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**.
+4. Work through the Part A checklist. Then click the activation control at the top of the flow builder: **Flow is OFF**. Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. ⚠ UNVERIFIED that this is one control. If you find two, turn on saving with the Flow Activation button, and switch ON with the Flow is OFF toggle.
 
 ### C1 Delegated Flow (event) [EVT-2]
 
@@ -145,7 +145,7 @@ Anything but 204 is logged as a failure in C11, and the flow still goes on to th
 
 ### C10 Branching – Lookup [FN-8]
 
-- **Value** ← C8.gtr status
+- **Value** ← C8.gtr status. ⚠ UNVERIFIED: the Number-to-text conversion into Value, as in wf-01 C9 [FN-8].
 - One row: `204` → `success`.
 - **Otherwise Result Is**: `failure`.
 

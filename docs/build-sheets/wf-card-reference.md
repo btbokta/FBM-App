@@ -64,7 +64,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 | LIM-3 | History, payload, and table limits | Platform | ✅ |
 | LIM-4 | Okta connector rate limits | Platform | ✅ |
 | LIM-5 | Return and Continue If inside containers | Platform | ✅ |
-| LIM-6 | Card timeouts and type errors | Platform | ✅ |
+| LIM-6 | Card timeouts, type errors, and flows that won't turn on | Platform | ✅ |
 | API-1 | `GET /api/v1/users/{id}` | Okta Management API | ✅ |
 | API-2 | `GET /api/v1/users/{id}/groups` | Okta Management API | ✅ |
 | API-3 | `DELETE /api/v1/users/{userId}/sessions` | Okta Management API | ✅ |
@@ -73,7 +73,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 | API-6 | Scopes the Okta connector cards need | Okta Workflows OAuth app | ✅ |
 | API-7 | `POST /oauth2/v1/global-token-revocation` and its scope | Okta OAuth API | ✅ |
 | API-8 | `PUT /api/v1/users/{userId}/risk` and its scope | Okta Management API | ✅ |
-| KB-1 to KB-6 | Support articles used as corroboration | — | ✅ |
+| KB-1 to KB-7 | Support articles used as corroboration | — | ✅ |
 
 ## Console screens and flow settings
 
@@ -82,6 +82,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Behavior relied on:**
   - The console opens on the **Home** page. Its links go to **Flows** (folders, flows, tables) and **Connections**.
   - Home's **Usage and plan limits** dashboard shows how many flows are active.
+  - To open the console, a user must have the **Okta Workflows** app assigned by a super admin. This is a different app from Okta Workflows OAuth.
 - **Sources:** [Workflows Console](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-workflowsconsole.htm), [Build and test a flow](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-build-a-flow.htm)
 
 ### SCR-2 Create a top-level folder
@@ -134,6 +135,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **New flow:** in the **Save flow** dialog, turn on **Save all data that passes through the flow**. The tutorial calls it **Save All Data** in the same dialog where you name the flow.
 - **Existing flow:** open the flow options with the **Flow Activation** button on the navigation bar and toggle the same option. The button then reads **Saving data** (or **Not saving data**). The ITP page offers the same choice when you toggle the flow on.
 - The ITP page says clicking **Flow is OFF** gives both the ON toggle and the save-all-data choice. So the Flow Activation button is most likely the same control as **Flow is OFF / ON** [SCR-7].
+- ⚠ UNVERIFIED: that they are one control. The sheets give a fallback for two controls: set saving with Flow Activation, and switch ON with Flow is OFF.
 - The sheets set the option in the first Save dialog. At the end, the builder opens that control, confirms the option is on, and switches the flow ON.
 - **Behavior relied on:**
   - Without it, Execution History keeps only metadata such as status and times. With it, you can open an execution and see every card's input and output values.
@@ -209,6 +211,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Mapping:** drag an output field onto an input field.
   - The output's format and the input's format must match.
   - An input tries to convert an incoming value to its own type. A number converts to text; the text `potato` doesn't convert to a number.
+  - ⚠ The pages disagree about mapping across types. Fields says inputs convert. Workflow elements says the formats must match. Troubleshoot inactive flows says an action card's Number output mapped to an input of another type "will likely not run properly". The sheets map Number status codes into Lookup's String **Value** [FN-8], and P6-T4 S3 tests that path.
 - **Custom fields:**
   - Many cards offer an empty field labeled **Click or drag to create** (custom output) or **Click or drop to create** (custom input). Click it and give the field a name.
   - Dragging an output onto it copies the origin's name and type.
@@ -337,6 +340,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Outputs:** **Response > Status Code** (Number), **Headers** (Object), **Body** (Object).
 - **Behavior relied on:**
   - It needs whatever scopes the called endpoint needs [API-6].
+  - The page says a successful DELETE returns 200 (OK), while the Management API documents 204 for the DELETEs the sheets use [API-3, API-5]. Sheets treat both as success.
   - Body is typed Object. The sheets convert it with JSON – Stringify and JSON – Parse before list cards [FN-17, FN-18].
 - ⚠ UNVERIFIED: whether a non-2xx response makes the card error.
 - ⚠ UNVERIFIED: that an API returning a JSON array (groups, clients) comes through intact in the Object-typed Body. Stringify accepts any JSON type, but no page shows an array in this output. It's used only in the conditional P10 variants (wf-02 Part B per-client, wf-05).
@@ -411,7 +415,8 @@ Categories and card names were checked against the [function reference](https://
 - **Outputs:** **Result**, Text by default. Changing its type also changes the Then Result Is column and Otherwise Result Is.
 - **Behavior relied on:**
   - Only an exact match counts; anything else gives the Otherwise value.
-  - A Number dragged into **Value** is converted to text [SCR-13], so `204` matches a row typed `204`.
+  - A Number dragged into **Value** should be converted to text [SCR-13], so `204` matches a row typed `204`.
+- ⚠ UNVERIFIED: that conversion; the docs conflict [SCR-13]. P6-T4 S3 settles it for every Lookup in the sheets. If 429 doesn't come back as `retry`, OIDC isn't retried, and `dispatcher-verify` S3 fails.
 - ⚠ UNVERIFIED: what happens when **Value**, a required field, arrives empty or null. It may give the Otherwise value, or it may error.
 - **Source:** [Lookup](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_lookup.htm)
 
@@ -434,16 +439,17 @@ Categories and card names were checked against the [function reference](https://
   - The flow continues after an error is handled.
   - Return and Continue If inside Try or If Error continue after the container [LIM-5].
   - Okta recommends no more than three nested If Error blocks; the sheets nest none.
-- **Other sources disagree on what the error object holds:**
-  - KB-2's screenshot of an If Error section shows the **Error** object listing `message`, `method`, `flo`, and `execution`, with no `code`, followed by an **Enter key name here** field.
-  - KB-6 quotes an Okta-card error as `{"error":{"status":500,"message":{"statusCode":400,…}}}`, which is a 500 that wraps the API's 400.
+- **Other evidence about the error object:**
+  - KB-7's runtime screenshot (2022 UI) supports `code`. An API Connector request got HTTP 500; the request card errored, the If Error section ran, and its **Error** object held `"statusCode":500`, `"message":"500 Internal Server Error"`, `"code":500`, a `body`, and `flo` as a number (`279441`).
+  - KB-2's screenshot shows the design-time key list of the **Error** object: `message`, `method`, `flo`, `execution`, and an **Enter key name here** field. It doesn't show runtime values, so it doesn't prove `code` is absent.
+  - KB-6 quotes an Okta-card error as `{"error":{"status":500,"message":{"statusCode":400,…}}}`, a 500 that wraps the API's 400. That's an Okta connector card, not Raw Request.
   - The Helper flows page says card error objects often carry `statusCode`.
 - ⚠ UNVERIFIED (U6): whether `code` is present for a Raw Request HTTP error, and whether it's the HTTP status or a wrapping 500. Also unverified: what it holds when a request fails without a status. P6-T4 scenario S2 settles it for 422, and catches both wrong cases:
   - If `code` is 500, SAML gets three needless retries, so the mock records four calls instead of one.
   - If `code` is missing and Object – Get errors, the SAML execution fails before writing its Results row, and For Each skips any rows after it.
   
   See the report for the no-status case.
-- **Sources:** [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [KB-2](https://support.okta.com/help/s/article/How-to-setup-an-error-notification-flow-in-Okta-Workflows) (text and screenshot), [KB-6](https://support.okta.com/help/s/article/Okta-Workflows-connection-fails-with-The-refresh-token-is-invalid-or-expired-error-and-requires-reauthorization), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm)
+- **Sources:** [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [KB-7](https://support.okta.com/help/s/article/How-to-Handle-an-External-API-Call-Error-inWorkflows) (runtime screenshot), [KB-2](https://support.okta.com/help/s/article/How-to-setup-an-error-notification-flow-in-Okta-Workflows) (text and screenshot), [KB-6](https://support.okta.com/help/s/article/Okta-Workflows-connection-fails-with-The-refresh-token-is-invalid-or-expired-error-and-requires-reauthorization), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm)
 
 ### FN-11 Object – Get
 - **Inputs:** **object** (Object, required) and **path** (Text, required).
@@ -591,10 +597,11 @@ Categories and card names were checked against the [function reference](https://
 - To halt, put Continue If outside the container, or use Return Error / Return Error If.
 - **Sources:** [If/ElseIf](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_branch.htm), [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [Return](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_return.htm), [Continue If](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_continueif.htm)
 
-### LIM-6 Card timeouts and type errors
+### LIM-6 Card timeouts, type errors, and flows that won't turn on
 - Every card has an internal timeout; when it passes, the card fails with "Method timeout exceeded".
 - "Invalid type conversion" occurs when a card gets a value it can't convert to its input type.
-- **Source:** [Workflows error messages](https://help.okta.com/wf/en-us/content/topics/workflows/execute/workflows-error-messages.htm)
+- A flow can't be activated when a connector it uses can't authenticate (invalid credentials). An alert in the Workflows Console names the connector.
+- **Sources:** [Workflows error messages](https://help.okta.com/wf/en-us/content/topics/workflows/execute/workflows-error-messages.htm), [Troubleshoot inactive flows](https://help.okta.com/wf/en-us/content/topics/workflows/execute/inactive-flows.htm)
 
 ## Okta API endpoints the cards call
 
@@ -619,4 +626,5 @@ Categories and card names were checked against the [function reference](https://
 | KB-4 | [Configure Delegated Workflows in Okta](https://support.okta.com/help/s/article/how-to-configure-delegated-workflows) (2026-08-24) | Delegated Flow sits under Built-in triggers. Inputs aren't required, so the flow must validate them. User Context > Okta User ID is the admin who runs the flow. Run is unavailable while the flow is off |
 | KB-5 | [Workflows Collection: Build Flows with Recursion](https://support.okta.com/help/s/article/set-up-recursion-in-workflows) (2026-02-11) | A flow can call itself |
 | KB-6 | [Workflows connection fails with "The refresh token is invalid or expired"](https://support.okta.com/help/s/article/Okta-Workflows-connection-fails-with-The-refresh-token-is-invalid-or-expired-error-and-requires-reauthorization) (2026-07-09) | Clearing the session of the account that authorized the connection breaks the connection; add flow logic that refuses that account |
+| KB-7 | [How to Handle an External API Call Error in Workflows](https://support.okta.com/help/s/article/How-to-Handle-an-External-API-Call-Error-inWorkflows) (2025-08-11) | An API Connector call that gets HTTP 500 errors into the If Error section. The runtime Error object holds `code` 500 and `statusCode` 500, and `flo` is a number |
 | FORUM-1 | [devforum: no public API to manage flows](https://devforum.okta.com/t/getting-workflow-configuration-through-management-api/34598) (Okta Developer Advocacy, 2025-11-19; corroboration only) | No public API manages flows or connectors |

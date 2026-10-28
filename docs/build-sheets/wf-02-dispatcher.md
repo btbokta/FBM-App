@@ -29,7 +29,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
 3. Build C2–C8 below.
-4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder. It reads **Flow is OFF**, and Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. Wait one minute before the first test run.
+4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder: **Flow is OFF**. Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. ⚠ UNVERIFIED that this is one control. If you find two, turn on saving with the Flow Activation button, and switch ON with the Flow is OFF toggle. Wait one minute before the first test run.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -200,8 +200,8 @@ This makes the same call the T5 sweep probe proved [API-3]. Add after C8:
 - **View Outputs**: `status`, type Number. Try field ← B3.1.Status Code; If Error field ← B3.2.sweep status.
 
 **B4 Branching – Lookup**
-- **Value** ← B3.status
-- One row: `204` → `success`.
+- **Value** ← B3.status. ⚠ UNVERIFIED: the Number-to-text conversion into Value, as in wf-01 C9 [FN-8].
+- Two rows: `200` → `success` and `204` → `success`. The API documents 204 [API-3], and the card's page says a successful DELETE returns 200 [ACT-4].
 - **Otherwise Result Is**: `failure`.
 
 **B5 Date & Time – Now**
@@ -230,7 +230,7 @@ With Per App, Dispatcher, Respond, and Respond by Email on, this helper would be
      - Try: **H5.1 Okta – Custom API Action** (`POC-Okta`), `DELETE`, **Relative URL** ← H4.output [API-5].
      - If Error: **H5.2 Flow Control – Assign** `sweep status` (Number) = `0`.
      - View Outputs: `status` (Number), Try ← H5.1.Status Code, If Error ← H5.2.sweep status.
-   - **H6 Branching – Lookup**: **Value** ← H5.status; `204` → `success`; Otherwise `failure`.
+   - **H6 Branching – Lookup**: **Value** ← H5.status; `200` → `success` and `204` → `success`; Otherwise `failure` (see B4).
    - **H7 Date & Time – Now**.
    - **H8 Tables – Create Row**: choose `POC-FBM Logout Results` and its five columns as in B6; Time ← H7.date; User ID ← H1.User ID; App name `Okta token sweep`; Status code ← H5.status; Outcome ← H6.Result.
    - Save and turn the flow ON.
