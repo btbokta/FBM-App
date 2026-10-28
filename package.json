@@ -1,0 +1,41 @@
+{
+  "name": "fbm-itp-poc",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "preflight": "tsx scripts/preflight.ts",
+    "env:check": "tsx scripts/env-check.ts",
+    "setup:secrets": "tsx scripts/setup-secrets.ts",
+    "secret:copy": "tsx scripts/copy-secret.ts",
+    "finding": "tsx scripts/finding.ts",
+    "tf": "tsx scripts/tf.ts",
+    "tf:sync-env": "tsx scripts/tf-sync-env.ts",
+    "mock": "tsx scripts/vercel.ts",
+    "check": "tsx scripts/check.ts",
+    "tables:gen": "tsx scripts/gen-tables.ts",
+    "poc": "tsx scripts/poc.ts",
+    "sp": "tsx scripts/session-protection.ts",
+    "report": "tsx scripts/report.ts",
+    "teardown": "tsx scripts/teardown.ts",
+    "teardown:verify": "tsx scripts/teardown-verify.ts"
+  },
+  "dependencies": {
+    "csv-parse": "7.0.3",
+    "csv-stringify": "6.9.0",
+    "dotenv": "18.0.9",
+    "jose": "6.2.13",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vercel": "65.4.0",
+    "vitest": "5.0.5"
+  }
+}

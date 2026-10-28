@@ -4,7 +4,7 @@ Status values: `todo`, `in_progress`, `done`, `blocked`, `skipped`. Update only 
 
 | ID | Title | Owner | Depends on | Status | Note |
 | --- | --- | --- | --- | --- | --- |
-| P0-T1 | Initialize repo and toolchain | AUTO | none | todo |  |
+| P0-T1 | Initialize repo and toolchain | AUTO | none | done | 2026-10-28: npm ci, typecheck, test exit 0; .env/keys/state ignored. .env.example blocked by permission rule, so docs/env.template stands in. npm cache ~/.npm has an EACCES file, so installs use --cache $TMPDIR/fbm-npm-cache. npm audit flags vercel (dev only; prod deps clean) |
 | P0-T2 | Env schema, preview-org guard, Okta client, and preflight | AUTO | P0-T1 | todo |  |
 | P0-T3 | Keys, local secrets, findings, and clipboard helper | AUTO | P0-T2 | todo |  |
 | P1-T1 | Confirm prerequisites and fill org values | HUMAN | P0-T3 | todo |  |
