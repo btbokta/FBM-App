@@ -6,7 +6,7 @@ Planned 2026-10-27. Source of truth for the design: [docs/itp-fbm-option-a-guide
 
 The POC proves, in a dedicated Okta preview org, that one delegated flow, `POC-ITP FBM – Respond`, can do what Universal Logout can't do for Federation Broker Mode (FBM) apps. The flow is triggered by ITP's entity risk rule, by session protection, or by a SOC admin. It runs the Okta ITP connector's Global Token Revocation card, then `POC-FBM Logout – Dispatcher`, which calls each enabled app in `POC-FBM Logout Registry`.
 
-A mock in-house app on Vercel stands in for the FBM apps. It signs users in through the FBM OIDC test app, exposes a Global Token Revocation endpoint per app and a vendor-style revoke endpoint, and records every call so a local TypeScript harness can time and check each test. Okta objects are Terraform; Workflows flows are hand-built from card-by-card build sheets because Okta has no supported import API (F40).
+A mock in-house app on Vercel stands in for the FBM apps. It signs users in through the FBM OIDC test app, exposes a Global Token Revocation endpoint per app and a vendor-style revoke endpoint, and records every call so a local TypeScript harness can time and check each test. Okta objects are Terraform; Workflows flows are hand-built from card-by-card build sheets because Okta has no supported import API (F40). Not everything the POC builds carries over: [reusable-workflow.md](reusable-workflow.md) separates the reusable workflow from the test scaffolding and has the redeploy checklist.
 
 ### Inputs as resolved
 
@@ -17,7 +17,7 @@ A mock in-house app on Vercel stands in for the FBM apps. It signs users in thro
 | Okta credentials | OAuth 2.0 service apps with private key JWT: `POC-Provisioner` (human-created) and `POC-Harness` (Terraform-created) |
 | Language | TypeScript. Runtime is **Node 24, not Node 20**: Vercel stopped deploying Node 20 functions on 2026-10-01 (F60). Local scripts use Node 24 too, so one runtime covers everything |
 | Mock app host | Vercel, project default domain `https://<project>.vercel.app` |
-| Real SaaS test tenant | None. The vendor branch is exercised against the mock's API-key endpoint |
+| Real SaaS test tenant | None. The vendor branch is exercised against the mock's API-key endpoint, and it's optional in a deployment ([reusable-workflow.md](reusable-workflow.md)) |
 | Burst test users | 25 |
 
 ### Success criteria
@@ -1488,10 +1488,10 @@ Do each task only when its trigger holds; otherwise mark it `skipped` with the f
 #### P11-T1 Export Workflows tables
 - **Owner:** HUMAN
 - **Depends on:** P9-T5 (and any P10 tasks not skipped)
-- **Goal:** Get the Results and Probe tables into the repo for the report.
+- **Goal:** Get the Results and Probe tables into the repo for the report, and save the finished Workflows folder for a redeploy ([reusable-workflow.md](reusable-workflow.md)). Teardown deletes the folder, so this export is the only copy of the built flows.
 - **Inputs:** [ac-08 §1](build-sheets/ac-08-workflows-exports.md).
-- **Steps:** The executor shows ac-08 §1 and stops; the human saves the two CSVs.
-- **Acceptance check:** `reports/data/results-export.csv` and `reports/data/probe-export.csv` exist with the expected headers.
+- **Steps:** The executor shows ac-08 §1 and stops; the human saves the two CSVs and the folder export.
+- **Acceptance check:** `reports/data/results-export.csv` and `reports/data/probe-export.csv` exist with the expected headers, and `reports/data/POC-ITP-FBM.folder` exists.
 - **Rollback:** delete the files.
 
 #### P11-T2 Generate the report
@@ -1588,7 +1588,7 @@ One command removes everything code created; a short checklist covers the rest.
 3. `npm run teardown:verify` must print `NOTHING LEFT`.
 4. [ac-09](build-sheets/ac-09-teardown.md):
    1. Session protection UI back to the recorded settings.
-   2. Turn off and delete the Workflows folder `POC-ITP-FBM` (flows and tables).
+   2. Confirm P11-T1 saved `reports/data/POC-ITP-FBM.folder`, then turn off and delete the Workflows folder `POC-ITP-FBM` (flows and tables).
    3. Delete the POC connections.
    4. Deactivate and delete `POC-Provisioner`.
    5. Delete the Vercel token.

@@ -4,11 +4,11 @@ Prepared 2026-10-27 on branch `wf-sheets-verified`, and updated 2026-10-28 for b
 
 ## 1. Summary
 
-- **Ledger:** 61 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards; the sheets now use 23, since If/ElseIf was dropped), 3 connection types, 13 console screens, 6 platform limits, and 8 API calls, plus 7 KB articles and 1 forum thread used as corroboration.
+- **Ledger:** 62 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards; the sheets now use 23, since If/ElseIf was dropped), 3 connection types, 14 console screens (SCR-14, export and import, added 2026-10-28), 6 platform limits, and 8 API calls, plus 7 KB articles and 1 forum thread used as corroboration.
 - **Sources:** about 60 pages, fetched as raw text in a browser. Okta's own help pages back every card name and field label in the sheets. Where a page leaves a point open, the sheet says `⚠ UNVERIFIED`, and section 7 lists each one with the task that settles it.
 - **Reviews:** three independent rounds. Round 1 found 0 confirmed errors and 8 suspected issues; round 2 found 1 confirmed (trivial) and 9 suspected; round 3 found 0 confirmed and 8 suspected. Every confirmed error is fixed. Every suspected issue is fixed or marked `⚠ UNVERIFIED`, with the task that settles it (section 5).
 - **Open items:** 26 `⚠ UNVERIFIED` items (section 7). Six of them cover the per-app and dispatcher logic (V1, V2, V3, V20, V24, V26), and P6-T4 settles all six before any ITP wiring.
-- **After the reviews:** on 2026-10-28 the builder found an error that all three rounds missed. wf-01 C8 asked for a second condition on an If/ElseIf card, and the console didn't offer one. C8 now nests two If/Else cards (section 12).
+- **After the reviews:** on 2026-10-28 the builder found an error that all three rounds missed. wf-01 C8 asked for a second condition on an If/ElseIf card, and the console didn't offer one. C8 now nests two If/Else cards (section 12). The same day, at the user's request, the docs were changed so the workflow can be redeployed with no third-party app and so they say what's test only (section 12, BF-2).
 
 ## 2. Errors in the old sheets
 
@@ -149,6 +149,11 @@ Sample data:
 6. Every POC registry row uses `email`, and every POC user has an email, so no task hits this.
 
 **PA-11: the Workflows connection account.** C2: `00uWFCONN` equals value b, so the flow stops with "Refusing to act on the Workflows connection account". No request, no row, no Return. In practice the dispatcher's C2 stops it first (D-5).
+
+**PA-12: GTR-only build, a row with Method `vendor` (R3).**
+- C5 gives `vendor`, so C8's condition is false. Its false branch holds only the C8.7 Assign, which gives 0, so C8 status code = 0. No request is sent.
+- C9 `"0"` matches no row, so `failure`; C12 gives `failure`.
+- **Row (…, POC-Mock-Vendor, 0, failure). Returns 0, failure, 1**, the same as PA-9. A `gtr` row runs exactly as PA-1 to PA-6, because C8's true branch is unchanged.
 
 ### 4.2 Dispatcher (wf-02)
 
@@ -419,3 +424,13 @@ Checks rerun after the fix:
 - Every mapping in the new C8 comes from an earlier card or from a step inside the same branch. C8 and C8.7 fill their false values from the card that ran in that branch, as the If/Else page describes [FN-5].
 - No reference to the old numbers C8.8–C8.11 or C8.10.x is left in the sheets, README, PLAN, or ac sheets, and every relative link resolves.
 - **Not reviewed independently:** no reviewer subagent checked this fix.
+
+| # | Request | Resolution |
+| --- | --- | --- |
+| BF-2 (2026-10-28) | The user needs the workflow to work with no third-party app, so that after testing someone else can redeploy it for custom apps with GTR endpoints. They also asked the docs to say what was built for testing and what's part of the reusable workflow | Done. The new [reusable-workflow.md](../reusable-workflow.md) tags every part as reusable, optional, conditional, or test only. It also lists the POC decisions that carry over, states the endpoint contract each app implements, and gives a GTR-only redeploy checklist. wf-01 has a GTR-only build of C8's false branch: one Assign of `0`, and no vendor connection (trace PA-12). wf-00 to wf-05 open with a "Reusable or test only" line, and the README defines the tags. The guide marks the vendor branch optional. P11-T1 and ac-08 §1 now export the folder before teardown, ac-09 checks that the export exists before deleting anything, and ledger SCR-14 records the export and import screens. No POC test or acceptance check changes, except that P11-T1 now also expects the folder export |
+
+Checks rerun after BF-2:
+- Every card heading in wf-01 to wf-05 matches a ledger name, including the GTR-only C8.7 Assign.
+- Every relative link in the changed files resolves, including the new links to reusable-workflow.md.
+- Every card that reusable-workflow.md names for a connection or an org-specific value exists in its sheet, with that connection or value.
+- **Not reviewed independently:** no reviewer subagent checked these edits.

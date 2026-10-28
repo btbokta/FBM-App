@@ -22,6 +22,8 @@ Click paths and card-by-card builds for HUMAN tasks. The executor shows the shee
 | [wf-card-reference Workflows card reference (ledger)](wf-card-reference.md) | Every wf-* sheet |
 | [wf-verification-report Verification of the wf-* sheets](wf-verification-report.md) | Review of the wf-* sheets |
 
+What carries over from the POC to a real deployment, and how to redeploy for apps with a Global Token Revocation endpoint, is in [reusable-workflow.md](../reusable-workflow.md).
+
 ## Notation in the wf-* sheets
 
 - **Card numbers:**
@@ -40,4 +42,8 @@ Click paths and card-by-card builds for HUMAN tasks. The executor shows the shee
 - **Labels:** card names, field labels, and console paths come from the ledger, [wf-card-reference.md](wf-card-reference.md), checked against Okta's docs on 2026-10-27. Square brackets such as [FN-7] cite its entries, and `⚠ UNVERIFIED` marks what the docs don't settle.
   - If a label in your console differs but the card is clearly the same, use it and report the difference.
   - If a card, field, or option is missing, stop and tell the executor.
+- **Reuse tags:** each wf sheet opens with a "Reusable or test only" line, and parts that aren't plainly reusable carry one of these tags. Untagged parts are reusable.
+  - **Test only:** built for the POC's tests; a deployment leaves it out.
+  - **Optional:** reusable, but only some deployments need it, such as the vendor path for SaaS apps.
+  - **Conditional:** built only if a P10 task's trigger holds; if the POC builds it, it's reusable.
 - After each flow, compare it with the sheet's checklist before telling the executor you're done.

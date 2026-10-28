@@ -7,6 +7,8 @@ You build it in up to three passes:
 - **Part B** (P7-T4): adds the logout cards, once the probe shows how ITP passes the user (U1).
 - **Part C** (P10-T1, conditional): adds the risk reset.
 
+**Reusable or test only:** C1, C4, the C5 for your outcome, and C6–C12 are reusable, and so is Part C if P10-T1 adds it. The probe, meaning C2, C3, and their `POC-Respond Probe` table, is test only. A deployment removes C2 and C3; no later card uses their outputs. See [reusable-workflow.md](../reusable-workflow.md).
+
 ## Flow settings
 
 | Setting | Value |
@@ -35,11 +37,11 @@ Click **Add Event** > **Delegated Flow**; it's in the Built-in triggers section.
 
 ### C2 Date & Time – Now [FN-16]
 
-The output you use is **date**.
+**Test only:** it feeds only C3. The output you use is **date**.
 
 ### C3 Tables – Create Row [FN-23]
 
-**Choose Table** > select `POC-Respond Probe` > **Choose**, then **Save** on the card. Check all seven columns, then **Save** [FN-23].
+**Test only:** the probe row. **Choose Table** > select `POC-Respond Probe` > **Choose**, then **Save** on the card. Check all seven columns, then **Save** [FN-23].
 
 | Column | Value |
 | --- | --- |
@@ -90,7 +92,7 @@ ac-05 gives you three Probe rows:
 
 ## Part B: logout cards (P7-T4)
 
-Keep C1–C4 unchanged; the Probe row is still written on every run. Add C5 for your outcome, then the common cards C6–C12, all at the top level of the flow. Save; the flow stays ON.
+Keep C1–C4 unchanged; the Probe row is still written on every run. A deployment removes C2 and C3. Add C5 for your outcome, then the common cards C6–C12, all at the top level of the flow. Save; the flow stays ON.
 
 ### C5 for outcome A: Flow Control – Assign [FN-3]
 
@@ -183,7 +185,7 @@ Anything but 204 is logged as a failure in C11, and the flow still goes on to th
 
 ## Part C: risk reset (P10-T1, conditional on `decision.riskReset == add`)
 
-Add after C12, at the top level:
+**Conditional.** If P10-T1 adds it, it's part of the reusable workflow. Add after C12, at the top level:
 
 ### C13 Okta ITP – Upsert User Risk [ACT-2]
 

@@ -4,6 +4,8 @@ Build this only when `decision.fallback == build`, meaning T6 failed its thresho
 
 The flow starts on the User Risk Detected event. It applies the same conditions as the rule: an escalation to High, a member of `POC-ITP-Test`, and not the connection account. Then it calls the dispatcher. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md).
 
+**Reusable or test only:** conditional. If the POC builds it, it's part of the reusable workflow, and C10's `<poc_group_id>` becomes the group your entity risk rule targets. See [reusable-workflow.md](../reusable-workflow.md).
+
 ## Flow settings
 
 | Setting | Value |

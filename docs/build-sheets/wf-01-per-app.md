@@ -2,6 +2,8 @@
 
 This flow is the guide's `FBM Logout – Per App` (guide Step 2). It logs one user out of one registry app and classifies the response. It retries 429 and 5xx up to three times by calling itself (decision D-RETRY), writes one `POC-FBM Logout Results` row per attempt (D-RESULTS), and returns the final status to its caller. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md); IDs in square brackets point to its entries.
 
+**Reusable or test only:** the whole flow is reusable except the vendor path, C8.7 and its true branch, which is **optional**. Only a deployment with SaaS apps in the registry needs it; the POC builds it to test against the mock. A deployment with only `gtr` apps uses the GTR-only build at the end of C8 instead and needs no vendor connection. See [reusable-workflow.md](../reusable-workflow.md).
+
 Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.1, C8.2, and C8.6.1 only.
 
 ## Flow settings
@@ -15,7 +17,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.1, 
 | First save | Right after C1, so the flow exists when C15.4 has to select it [SCR-8] |
 | Turn on | After the checklist, before you build wf-02 |
 
-Saving all data puts the test users' emails and the 5-minute access token from C1 into execution history, where other Workflows admins can see them [SCR-6]. That's accepted for this POC; see the report.
+Saving all data puts the test users' emails and the 5-minute access token from C1 into execution history, where other Workflows admins can see them [SCR-6]. That's accepted for this POC; see the report. **Test only:** a deployment turns saving off on this flow.
 
 ## Build
 
@@ -157,14 +159,16 @@ An If/Else card takes one condition. So C8 tests for `gtr`, and its false branch
 
 #### False branch (lower, blue): not `gtr`
 
-Add one card here, C8.7. Everything else in this branch goes inside C8.7.
+The POC build adds one card here, C8.7, and everything else in this branch goes inside it. A GTR-only deployment uses the GTR-only build below instead.
 
-**C8.7 Branching – If/Else**: `vendor` or neither
+**C8.7 Branching – If/Else**: `vendor` or neither. **Optional:** SaaS apps only.
 
 - **Condition**: **value a** ← C5.output; **comparison** `equal to`; **value b** `vendor`. Click **Done**.
 - **Create Outputs**: add `status code`, type Number.
 
 ##### C8.7 true branch (upper, orange): `vendor`
+
+**Optional.** These cards call the mock's API-key endpoint, which stands in for a SaaS app. For a real SaaS app, guide Step 2 uses that vendor's own connector and session-revocation API instead of C8.7.4.1's mock connection.
 
 **C8.7.1 Object – Construct**: the body object.
 
@@ -210,6 +214,17 @@ Add one card here, C8.7. Everything else in this branch goes inside C8.7.
 - In C8.7's outputs: the false value of `status code` ← C8.7.5.status code.
 
 **Finish C8:** in C8's outputs, the false value of `status code` ← C8.7.status code.
+
+##### GTR-only build (deployments with no SaaS apps)
+
+Build this in C8's false branch instead of the C8.7 above. It sends no request and needs no vendor connection. The POC (P6-T2) builds the version above.
+
+**C8.7 Flow Control – Assign** [FN-3]: the only card in C8's false branch.
+- Create one input: `status code`, type Number, value `0`.
+
+**Finish C8:** in C8's outputs, the false value of `status code` ← C8.7.status code.
+
+A row with any Method other than `gtr` then gets no request and a `0` `failure` Results row (report trace PA-12). In a copy imported from the POC's export, remove the vendor C8.7 and everything inside it, then add this Assign in its place.
 
 ### C9 Branching – Lookup [FN-8]: classify the status
 
@@ -387,6 +402,7 @@ Save. Then turn the flow on (Build step 4).
 - [ ] C8.6.1 uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.7.4.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
 - [ ] C8.6 and C8.7.4 each output `status` (Number), with both the Try and If Error fields filled.
 - [ ] C8 and C8.7 each output `status code` (Number), with the true and false values filled.
+- [ ] Deployments only, GTR-only build: C8's false branch holds only the C8.7 Assign, and no card uses a vendor connection.
 - [ ] C9 has 23 rows and Otherwise `failure`. C12 has 6 rows and Otherwise `failure`.
 - [ ] C15.4 calls this flow, with all five inputs mapped and outputs `Status code` (Number), `Outcome` (Text), `Attempts` (Number). C16 returns the same three names and types.
 - [ ] No secret is typed into any card.

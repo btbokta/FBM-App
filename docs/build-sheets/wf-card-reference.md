@@ -25,6 +25,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 | SCR-11 | Delegated flows page (Run flow dialog) | Admin Console > Workflows > Delegated flows | ✅ |
 | SCR-12 | Okta Workflows OAuth app: Client ID and Client secret | Admin Console > Applications and Resources > Applications | ✅ |
 | SCR-13 | Fields, types, mapping, custom fields | Every card | ✅ |
+| SCR-14 | Export and import a folder | Flows page > folder's Actions dropdown > Export or Import | ✅ |
 | CON-1 | Okta connection | New Connection > Okta | ✅ |
 | CON-2 | Okta ITP connection | New Connection > Okta ITP | ✅ |
 | CON-3 | API Connector connection: None, Basic, Custom Header | New Connection > API Connector, or a card's + New Connection | ✅ with ⚠ |
@@ -221,6 +222,15 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Sources:** [Fields](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-fields.htm), [Workflow elements](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-elements.htm), [Cards in flows](https://help.okta.com/wf/en-us/Content/Topics/Workflows/learn/about-cards.htm), [KB-1](https://support.okta.com/help/s/article/How-to-Iterate-Over-Rows-in-a-Workflows-Table)
 
 ## Connections
+
+### SCR-14 Export and import a folder
+- **Export:** on the Flows page, select the folder, open its **Actions** dropdown, and select **Export**. The **Export folder** dialog offers "Export the entire folder tree, including the content from all nested subfolders" or "Export just the contents of the current folder". Click **Export**, then **Download** to save a `.folder` file. The maximum file size is 27 MB.
+- **What an export keeps:** the flows, the table schemas, and the links between flows, such as a Call Flow to its helper.
+- **What it drops:** all connection information and all table data.
+- **Import:** select the target folder, open its **Actions** dropdown, and select **Import**. Drag the file into the dialog or click **Choose file from computer**, then click **OK**. Imported flows appear as new flows, and tables are recreated empty.
+- **After an import:** restore every card's connection. In the same org with Folder Access Control on, add the flows' org-level connections to the target folder before you import; flows with folder-level connections can't be imported into another folder.
+- **Used by:** ac-08 §1 and [reusable-workflow.md](../reusable-workflow.md), not by the wf sheets.
+- **Source:** [Export and import flows](https://help.okta.com/wf/en-us/content/topics/workflows/build/export-import-flows.htm), fetched 2026-10-28.
 
 ### CON-1 Okta connection
 - **Where:** New Connection > **Okta** [SCR-4].

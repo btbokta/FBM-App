@@ -4,6 +4,8 @@ You'll create the folder `POC-ITP-FBM`, its three tables, and the five connectio
 
 Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which one of `POC-AS Token (Basic)` or `POC-Mock GTR Static (Custom Header)` you create.
 
+**Reusable or test only:** the folder, the Registry's columns (not its four test rows), the Results table, and `POC-Okta`, `POC-Okta ITP`, `POC-API None`, and `POC-AS Token (Basic)` are reusable. `POC-Respond Probe` and `POC-Mock Vendor (Custom Header)` are test only. `POC-Mock GTR Static (Custom Header)` is conditional: static mode only (D-AUTH). See [reusable-workflow.md](../reusable-workflow.md).
+
 ## Before you start
 
 1. Sign in to the Admin Console as the **connection account**, `<OKTA_WF_CONNECTION_USER_ID>`. It's the super admin that authorizes the Okta connections, so every rule and flow in the POC refuses it [CON-1, KB-6].
@@ -52,7 +54,7 @@ Then import the rows:
 3. For each CSV field, check that the table column with the same name is selected. It's the default when the names match.
 4. Click **Import**.
 
-Expected: 4 rows.
+Expected: 4 rows. **Test only:** these rows point at the mock app. A deployment adds one row per real FBM app instead.
 - `POC-FBM-OIDC`, `POC-FBM-SAML`, and `POC-Mock-Vendor` show Enabled = true.
 - `POC-Disabled-Canary` shows Enabled = false.
 
@@ -82,7 +84,7 @@ Leave it empty. `tables/poc-fbm-logout-results.csv` holds only the header, for r
 | `Caller Display Name` | String |
 | `Caller Alternate ID` | String |
 
-Leave it empty.
+Leave it empty. **Test only:** it records what the Delegated Flow card receives (wf-03 Part A). A deployment doesn't need it.
 
 ## 3. Connections
 
@@ -94,14 +96,14 @@ Create each connection on the Workflows Console **Connections** page and give fo
 
 If you missed Folder Access, find the connection on the Connections page, click **Open** next to its connector, and use **Assign Folders** to add `POC-ITP-FBM`. If your folder has its own **Connections** tab, creating the connection there also works; it's then usable only in that folder.
 
-| Connection | Connector | Auth type | Create when |
-| --- | --- | --- | --- |
-| `POC-Okta` | Okta | (OAuth, Okta Workflows OAuth app) | always |
-| `POC-Okta ITP` | Okta ITP | (OAuth, Okta Workflows OAuth app) | always |
-| `POC-API None` | API Connector | None | always |
-| `POC-Mock Vendor (Custom Header)` | API Connector | Custom Header | always |
-| `POC-AS Token (Basic)` | API Connector | Basic | `GTR_AUTH_MODE=oauth` |
-| `POC-Mock GTR Static (Custom Header)` | API Connector | Custom Header | `GTR_AUTH_MODE=static` |
+| Connection | Connector | Auth type | Create when | In a deployment |
+| --- | --- | --- | --- | --- |
+| `POC-Okta` | Okta | (OAuth, Okta Workflows OAuth app) | always | Reusable |
+| `POC-Okta ITP` | Okta ITP | (OAuth, Okta Workflows OAuth app) | always | Reusable |
+| `POC-API None` | API Connector | None | always | Reusable, oauth mode: the `gtr` calls |
+| `POC-Mock Vendor (Custom Header)` | API Connector | Custom Header | always | Test only: the mock's API key |
+| `POC-AS Token (Basic)` | API Connector | Basic | `GTR_AUTH_MODE=oauth` | Reusable, oauth mode: the token request |
+| `POC-Mock GTR Static (Custom Header)` | API Connector | Custom Header | `GTR_AUTH_MODE=static` | Conditional: static mode only |
 
 ### `POC-Okta` (Okta connector) [CON-1]
 

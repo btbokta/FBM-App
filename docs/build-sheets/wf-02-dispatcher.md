@@ -9,6 +9,8 @@ The POC differs from the guide in three ways:
 
 Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and C8 only.
 
+**Reusable or test only:** Part A is reusable. The Testing section is test only. Part B is conditional: it's built only if P10-T3 runs, and then it's reusable too. See [reusable-workflow.md](../reusable-workflow.md).
+
 ## Part A: build (P6-T3)
 
 ### Flow settings
@@ -18,7 +20,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
 | Folder | `POC-ITP-FBM` |
 | Flow name | `POC-FBM Logout – Dispatcher` (en dash) |
 | Kind | Helper flow: its event card is Helper Flow [EVT-1] |
-| Save all data that passes through the flow | On. P6-T4 reads C6 and C7.2 from the executions [SCR-6] |
+| Save all data that passes through the flow | On. P6-T4 reads C6 and C7.2 from the executions [SCR-6]. **Test only:** a deployment turns it off, because the executions hold the access token |
 | Turn on | After the checklist. `POC-FBM Logout – Per App` must already be ON |
 
 ### Build
@@ -114,7 +116,7 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, create one
   - Try field ← C7.4.output
   - If Error field ← C7.7.access token
 
-If the token request fails, the dispatcher still calls every app. The `gtr` apps get `Bearer unavailable` and answer 401, which gives failure rows. The vendor app uses its own connection, so it's still logged out. ⚠ UNVERIFIED: that a 401 is caught like any other error status (U6, the same path S2 tests). If a Per App execution fails instead, For Each skips the rows after it [FN-19].
+If the token request fails, the dispatcher still calls every app. The `gtr` apps get `Bearer unavailable` and answer 401, which gives failure rows. In the POC, the vendor app uses its own connection, so it's still logged out. ⚠ UNVERIFIED: that a 401 is caught like any other error status (U6, the same path S2 tests). If a Per App execution fails instead, For Each skips the rows after it [FN-19].
 
 ### C8 List – For Each [FN-19]
 
@@ -151,7 +153,7 @@ For Each has no outputs. Each Per App execution writes its own Results rows. If 
 
 ## Testing (P6-T4)
 
-For each scenario the executor runs `npm run check -- dispatcher-prep --user 02 --scenario <S>` and gives you user02's Okta user ID: `<user02 id>`.
+**Test only.** For each scenario the executor runs `npm run check -- dispatcher-prep --user 02 --scenario <S>` and gives you user02's Okta user ID: `<user02 id>`.
 
 1. Open `POC-FBM Logout – Dispatcher` and click **Run** [SCR-8]. In the **Run Flow** window, enter `User ID` = `<user02 id>` and click **Run**.
 2. Wait about 30 seconds, then tell the executor "done". The executor runs `dispatcher-verify`.
@@ -175,7 +177,7 @@ For each scenario the executor runs `npm run check -- dispatcher-prep --user 02 
 
 ## Part B: token sweep (P10-T3, conditional)
 
-Add only the variant named by `decision.tokenSweep`. Both variants come after C8, so they run after every app call.
+**Conditional.** If P10-T3 builds it, it's part of the reusable workflow. Add only the variant named by `decision.tokenSweep`. Both variants come after C8, so they run after every app call.
 
 ### Variant `user-sessions` (no new flow)
 

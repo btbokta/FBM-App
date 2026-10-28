@@ -2,6 +2,8 @@
 
 This flow is the guide's `ITP FBM – Respond by Email` (guide Step 6, the optional email wrapper). It's a delegated flow for SOC analysts who would rather enter an email address than an Okta user ID. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md).
 
+**Reusable or test only:** optional, as in the guide. Keep it if the POC recommends it (D-EMAIL), and always under probe outcome C1, where it's the SOC's only manual route. See [reusable-workflow.md](../reusable-workflow.md).
+
 ## Flow settings
 
 | Setting | Value |

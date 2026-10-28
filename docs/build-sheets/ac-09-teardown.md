@@ -3,7 +3,7 @@
 Do this after `npm run teardown -- --yes` and `npm run teardown:verify` have passed. Work in this order and report each item as done.
 
 1. **Session protection UI.** Restore the values in `reports/evidence/sp-original-ui.md`, following ac-07 §4. Set Status last.
-2. **Workflows flows.** In the Workflows console, folder `POC-ITP-FBM`, turn OFF and then delete:
+2. **Workflows flows.** First check that `reports/data/POC-ITP-FBM.folder` exists (P11-T1); it's the only copy of the built flows. Then, in the Workflows console, folder `POC-ITP-FBM`, turn OFF and then delete:
    - `POC-ITP FBM – Risk Detected (fallback)` (if built)
    - `POC-ITP FBM – Respond by Email`
    - `POC-ITP FBM – Respond`
