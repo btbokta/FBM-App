@@ -1,13 +1,14 @@
 # Verification report: Workflows build sheets wf-00 to wf-05
 
-Prepared 2026-10-27 on branch `wf-sheets-verified`. The sheets were rewritten from [wf-card-reference.md](wf-card-reference.md), a ledger built from pages fetched in this session, then checked mechanically, traced by hand, and reviewed independently.
+Prepared 2026-10-27 on branch `wf-sheets-verified`, and updated 2026-10-28 for builder feedback (section 12). The sheets were rewritten from [wf-card-reference.md](wf-card-reference.md), a ledger built from pages fetched in this session, then checked mechanically, traced by hand, and reviewed independently.
 
 ## 1. Summary
 
-- **Ledger:** 61 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards), 3 connection types, 13 console screens, 6 platform limits, and 8 API calls, plus 7 KB articles and 1 forum thread used as corroboration.
+- **Ledger:** 61 entries. That's 31 cards (3 events, 4 connector actions, 24 function cards; the sheets now use 23, since If/ElseIf was dropped), 3 connection types, 13 console screens, 6 platform limits, and 8 API calls, plus 7 KB articles and 1 forum thread used as corroboration.
 - **Sources:** about 60 pages, fetched as raw text in a browser. Okta's own help pages back every card name and field label in the sheets. Where a page leaves a point open, the sheet says `⚠ UNVERIFIED`, and section 7 lists each one with the task that settles it.
 - **Reviews:** three independent rounds. Round 1 found 0 confirmed errors and 8 suspected issues; round 2 found 1 confirmed (trivial) and 9 suspected; round 3 found 0 confirmed and 8 suspected. Every confirmed error is fixed. Every suspected issue is fixed or marked `⚠ UNVERIFIED`, with the task that settles it (section 5).
 - **Open items:** 26 `⚠ UNVERIFIED` items (section 7). Six of them cover the per-app and dispatcher logic (V1, V2, V3, V20, V24, V26), and P6-T4 settles all six before any ITP wiring.
+- **After the reviews:** on 2026-10-28 the builder found an error that all three rounds missed. wf-01 C8 asked for a second condition on an If/ElseIf card, and the console didn't offer one. C8 now nests two If/Else cards (section 12).
 
 ## 2. Errors in the old sheets
 
@@ -15,11 +16,11 @@ Each item is a claim the old sheets made that a fetched page contradicts, or tha
 
 | # | Old sheet | What was wrong | Evidence | Resolution |
 | --- | --- | --- | --- | --- |
-| E1 | wf-01 C7.4, C7.8; PLAN U6 and P6-T4 | Read the HTTP status from the If Error object at `statusCode`. The documented If Error object has `message`, `code`, `method`, `flo`, and `execution`. `statusCode` appears only on the helper-flow Error object used by card-level error handling. If Raw Request errors on non-2xx, which is the U6 default, every non-2xx status would read as empty. A 404 would become a failure, 429 and 5xx would never retry, and T7 would fail | [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm), [KB-7](https://support.okta.com/help/s/article/How-to-Handle-an-External-API-Call-Error-inWorkflows). KB-7's runtime screenshot shows an API Connector HTTP 500 caught by If Error with `code` 500 | wf-01 C8.6.2 and C8.10.2 use path `code`. The U6 default now says `code`; U6 stays unverified and is settled by S2 |
+| E1 | wf-01 C7.4, C7.8; PLAN U6 and P6-T4 | Read the HTTP status from the If Error object at `statusCode`. The documented If Error object has `message`, `code`, `method`, `flo`, and `execution`. `statusCode` appears only on the helper-flow Error object used by card-level error handling. If Raw Request errors on non-2xx, which is the U6 default, every non-2xx status would read as empty. A 404 would become a failure, 429 and 5xx would never retry, and T7 would fail | [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm), [KB-7](https://support.okta.com/help/s/article/How-to-Handle-an-External-API-Call-Error-inWorkflows). KB-7's runtime screenshot shows an API Connector HTTP 500 caught by If Error with `code` 500 | wf-01 C8.6.2 and C8.7.4.2 use path `code`. The U6 default now says `code`; U6 stays unverified and is settled by S2 |
 | E2 | wf-00 §3 | Created every connection on the org-level Connections page and never added it to the folder. Org-level connections can't be used until they're added to a folder | [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm) | wf-00 creates each connection on the Connections page with **Folder Access** set to `POC-ITP-FBM`. Review round 1 changed the route: one help page says a folder has only Flows and Tables tabs (SCR-4) |
 | E3 | wf-01 (whole flow) and wf-03 Part A | Neither had a connection-account Continue If. CLAUDE.md requires one in every flow | CLAUDE.md, Safety rules | wf-01 C2 and wf-03 C4 added, each before any card that acts on a user |
 | E4 | wf-00 `POC-Okta` step 1 | Took the client credentials from Okta Workflows OAuth > General > Client Credentials. The docs put them on the **Sign On** tab, and the menu is now **Applications and Resources** > Applications | [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm) | wf-00 corrected |
-| E5 | wf-01 C7.3, C7.5 | Built JSON bodies with Text – Compose and hand-typed quotes. Compose documents no escaping, so a `"` or `\` in a value breaks the body. The Raw Request page recommends Object cards plus JSON – Stringify | [Compose](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/text/text_compose.htm), [Raw Request](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_raw.htm), [Construct](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/object/object_construct.htm) | wf-01 C8.3–C8.5 and C8.7–C8.8 use Construct and Stringify |
+| E5 | wf-01 C7.3, C7.5 | Built JSON bodies with Text – Compose and hand-typed quotes. Compose documents no escaping, so a `"` or `\` in a value breaks the body. The Raw Request page recommends Object cards plus JSON – Stringify | [Compose](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/text/text_compose.htm), [Raw Request](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_raw.htm), [Construct](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/object/object_construct.htm) | wf-01 C8.3–C8.5 and C8.7.1–C8.7.2 use Construct and Stringify |
 | E6 | wf-01 C8 | The Lookup listed only 200–202, 204, 404, 429, 500, and 502–504. That treated 203, 205–208, 226, 501, and 505–511 as failures, against guide Step 2.5 (any 2xx is success, any 5xx is retried) | Guide Step 2.5; [HTTP status codes](https://help.okta.com/wf/en-us/content/topics/workflows/execute/http-status-codes.htm) | wf-01 C9 lists every standard 2xx and 5xx code on Okta's page |
 | E7 | wf-01 C14 false branch | Mapped outputs of cards before the If/Else straight into its false-branch outputs. The doc only describes filling them from the branch's own steps | [If/Else](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_if.htm) | Added C15.5 Assign in the false branch |
 | E8 | wf-03, wf-04 | Never turned on **Save all data that passes through the flow**. Without it, execution history shows no card outputs, but ac-04 §2 and ac-06 §2 ask you to read the Global Token Revocation Status Code from execution history | [Save flow data](https://help.okta.com/wf/en-us/content/topics/workflows/execute/execution-history-save.htm), [View flow execution history](https://help.okta.com/wf/en-us/content/topics/workflows/execute/execution-history-view.htm) | Every sheet turns it on in the first Save dialog |
@@ -46,7 +47,7 @@ The old sheets got these right, and the docs confirm it:
 | Check | Result |
 | --- | --- |
 | Every card name matches a ledger entry exactly | Pass. A script compared every card heading in wf-01 to wf-05 with the ledger's EVT, ACT, and FN names |
-| Every `←` points to an earlier card's output that's in scope, and that output exists in the ledger or is created in the sheet | Pass. Each mapping was checked by hand. Outputs from inside a branch or section leave only through If/ElseIf or If Error View Outputs, or If/Else Create Outputs (wf-01 C8, C8.6, C8.10, C15; wf-02 C7, B3; wf-03 C8; wf-04 C5; H5) |
+| Every `←` points to an earlier card's output that's in scope, and that output exists in the ledger or is created in the sheet | Pass. Each mapping was checked by hand. Outputs from inside a branch or section leave only through If Error View Outputs or If/Else Create Outputs (wf-01 C8, C8.6, C8.7, C8.7.4, C15; wf-02 C7, B3; wf-03 C8; wf-04 C5; H5) |
 | Source and target types are compatible | Pass, with one open item. The only cross-type mapping is a Number status into Lookup's String **Value** (wf-01 C9, wf-03 C10, wf-04 C7, wf-02 B4 and H6). The Fields page says inputs convert, but two other pages conflict, so it's marked ⚠ (V26) and settled by S3. Object to list goes through Stringify and Parse |
 | Helper Flow inputs match every Call Flow and For Each that calls the helper | Pass. Per App takes Row (Object), User profile (Object), Access token (Text), Attempt (Number), User ID (Text), from wf-01 C15.4 and wf-02 C8. Dispatcher takes User ID (Text), from wf-03 C12, wf-04 C9, and wf-05 C14. Token Sweep takes User ID and Client, from wf-02 B5 |
 | Return fields match the calling Call Flow's outputs | Pass. wf-01 C16 returns `Status code` (Number), `Outcome` (Text), `Attempts` (Number), which equal C15.4's outputs. The Dispatcher has no Return and its callers define no outputs |
@@ -78,7 +79,7 @@ Sample data:
 1. C1: Row = R1, User profile = `{"login":"poc-itp-user02@example.com","email":"poc-itp-user02@example.com",…}`, Access token = `eyJ…`, Attempt = 1, User ID = `00uUSER02`.
 2. C2: `00uUSER02` ≠ `00uWFCONN`, so the flow continues.
 3. C3–C7: C3 `email`; C4 `poc-itp-user02@example.com`; C5 `gtr`; C6 `M/apps/oidc/global-token-revocation`; C7 `POC-FBM-OIDC`.
-4. C8: condition 1 is true.
+4. C8: Method is `gtr`, so the true branch runs.
    - C8.1 `Bearer eyJ…`.
    - C8.2 `{"Authorization":"Bearer eyJ…","Content-Type":"application/json","Accept":"application/json"}`.
    - C8.3 `{"format":"email","email":"poc-itp-user02@example.com"}`.
@@ -129,14 +130,14 @@ Sample data:
 **PA-7: disabled registry row (R4).** The C6 filter on the dispatcher drops R4, so Per App never runs for it: no call and no row. S1's `dispatcher-verify` checks that `disabled` got no call; that catches a wrong filter (U7).
 
 **PA-8: `vendor` method (R3).**
-1. C5 gives `vendor`, so branch 2 runs.
-   - C8.7 `{"email":"poc-itp-user02@example.com"}`; C8.8 is the same object as a JSON string.
-   - C8.9 builds the headers.
-   - C8.10.1 POSTs through `POC-Mock Vendor (Custom Header)`, which adds `X-API-Key`, and gets 204. So C8 status code = 204.
+1. C5 gives `vendor`, so C8's condition is false and C8.7's is true.
+   - C8.7.1 `{"email":"poc-itp-user02@example.com"}`; C8.7.2 is the same object as a JSON string.
+   - C8.7.3 builds the headers.
+   - C8.7.4.1 POSTs through `POC-Mock Vendor (Custom Header)`, which adds `X-API-Key`, and gets 204. So C8.7.4 status = 204, C8.7 status code = 204, and C8 status code = 204.
 2. **Row (…, POC-Mock-Vendor, 204, success). Returns 204, success, 1.**
 
 **PA-9: unknown method (a row with Method `saml-api`).**
-- C8 runs Else: C8.11 gives 0, so C8 status code = 0. C9 `"0"` matches no row, so `failure`; C12 gives `failure`.
+- C8's and C8.7's conditions are both false. C8.7.5 gives 0, so C8.7 and C8 status code = 0. C9 `"0"` matches no row, so `failure`; C12 gives `failure`.
 - **Row (…, 0, failure). Returns 0, failure, 1.** No HTTP request is sent.
 
 **PA-10: profile lacks the identifier attribute (Identifier attribute `employeeNumber`, profile has none).**
@@ -311,15 +312,15 @@ The step 3 checks were rerun on the final files, then each sheet was read top to
   - Every ledger ID cited in a sheet or README exists.
   - Every flow name uses an en dash, and no long token-like strings appear.
   - Every relative link in the touched files resolves.
-  - `grep -rn 'wf-0\|C[0-9]' docs CLAUDE.md` shows the PLAN references now point at existing cards: wf-01 C3, C5–C7, C8.6, C8.6.2, and C8.10.2 in P6-T4, and wf-03 C13–C15 in P10-T1.
-- **Builder read-through:** one step still made the builder guess. wf-01 never said where the If Error section's **Error** object appears. C8.6.2 and C8.10.2 now say it's at the left of the If Error section under **context**, per Okta's screenshots [FN-10, KB-7].
+  - `grep -rn 'wf-0\|C[0-9]' docs CLAUDE.md` shows the PLAN references now point at existing cards: wf-01 C3, C5–C7, C8.6, C8.6.2, and C8.7.4.2 in P6-T4, and wf-03 C13–C15 in P10-T1.
+- **Builder read-through:** one step still made the builder guess. wf-01 never said where the If Error section's **Error** object appears. C8.6.2 and C8.7.4.2 now say it's at the left of the If Error section under **context**, per Okta's screenshots [FN-10, KB-7].
 - **Not re-reviewed:** the round-3 edits and this read-through edit weren't checked by an independent reviewer.
 
 ## 7. Remaining `⚠ UNVERIFIED` items
 
 | # | Item | Where | Settled by |
 | --- | --- | --- | --- |
-| V1 | Whether a non-2xx response makes Raw Request error, and whether the If Error `code` holds the HTTP status | wf-01 C8.6, C8.10 | U6, P6-T4 S2 |
+| V1 | Whether a non-2xx response makes Raw Request error, and whether the If Error `code` holds the HTTP status | wf-01 C8.6, C8.7.4 | U6, P6-T4 S2 |
 | V2 | Search Rows row shape in this org, Object – Get paths containing spaces, and the filter operator for a Boolean column | wf-01 C3, C5–C7; wf-02 C6 | U7, P6-T4 S1 (the disabled row must get no call; a pasted row object) |
 | V3 | That the Basic connection's header works with the Okta token endpoint. The docs show `Authorization: Basic base64(username:password)`, which is `client_secret_basic` | wf-02 C7.2 | U11, P6-T4 S1 |
 | V4 | Which Delegated Flow field ITP fills | wf-03 | U1, P7-T3 |
@@ -330,7 +331,7 @@ The step 3 checks were rerun on the final files, then each sheet was read top to
 | V9 | How Global Token Revocation presents the opaque/iss_sub choice, and whether it errors on non-2xx | wf-03 C8, wf-04 C5 | P7-T4 build (the builder stops if ISS/SUB stay required), P8-T1 (status recorded) |
 | V10 | Whether a helper must be ON to be called, and whether a flow must be saved before it can select itself | wf-01, wf-02 | No task needed: the sheets turn helpers on first and save before C15.4 |
 | V11 | The label `Custom Header` vs `Custom`; whether an API Connector icon appears in the New Connection selector; and whether a folder has its own Connections tab (two help pages disagree) | wf-00 | P6-T1. The builder reports, and the sheet gives a fallback for each |
-| V12 | The Error object's `code` when a request fails with no HTTP status | wf-01 C8.6.2, C8.10.2 | **No task.** See PC3 |
+| V12 | The Error object's `code` when a request fails with no HTTP status | wf-01 C8.6.2, C8.7.4.2 | **No task.** See PC3 |
 | V13 | Object – Get on a missing path | wf-01 C4 | **No task.** POC users all have email; listed for production |
 | V14 | Whether a blank delegated-flow input counts as empty | wf-03 C6, wf-04 C2 | P8-T4 T4c |
 | V15 | Scopes for the Okta ITP User Risk Detected event | wf-05 C1 | P10-T5 (the builder stops on a warning) |
@@ -401,8 +402,20 @@ The executor still settles these by test.
 
 - **F41:** the field paths User > ID, Response > Status Code, Risk > Level, and Risk > Previous Level.
 - **F43:** what the System Log event `workflows.user.delegatedflow.run` is documented for.
-- **F45:** the card list now matches the sheets. Text – Compose is out; JSON – Stringify, Tables, and Raw Request are in. Wait For is 1 second to 30 days, and For Each stops on a helper error.
+- **F45:** the card list now matches the sheets. Text – Compose is out; JSON – Stringify, Tables, and Raw Request are in. Wait For is 1 second to 30 days, and For Each stops on a helper error. On 2026-10-28, after the builder's report, If/ElseIf came out too (section 12).
 - **F46:** the If Error object's fields.
 - **F47:** the recursion limit.
 
 F39, F40, F42, F44, F48, F49, F50, F51, and F52 were re-checked and are correct.
+
+## 12. Builder feedback after the merge
+
+| # | Report | Resolution |
+| --- | --- | --- |
+| BF-1 (2026-10-28) | wf-01 C8 said "Add a second condition" on an If/ElseIf card. The builder couldn't, and reported that "workflow if/else cards only have a single condition". Okta's If/ElseIf page says **Edit Conditions** adds conditions, but the sheet named no control for it, and none of the three review rounds caught that | Fixed. C8 is now an If/Else on `gtr`. Its false branch holds only C8.7, an If/Else on `vendor`, and C8.7's false branch assigns 0. Okta's If/Else page documents nesting one If/Else inside another [FN-5]; I re-fetched it and the If/ElseIf page on 2026-10-28. Every trace sends the same requests and writes the same rows as before. The vendor cards moved from C8.7–C8.10 to C8.7.1–C8.7.4, and the Else card from C8.11 to C8.7.5. Updated to match: wf-01's checklist and report, the README notation, PLAN F45 and P6-T4, the ledger's FN-5 and FN-6, traces PA-1, PA-8, and PA-9, E1, E5, V1, V12, and sections 3 and 6 |
+
+Checks rerun after the fix:
+- Every card heading in wf-01 to wf-05 still matches a ledger name. wf-01 has one card mention more than before, C8.7.
+- Every mapping in the new C8 comes from an earlier card or from a step inside the same branch. C8 and C8.7 fill their false values from the card that ran in that branch, as the If/Else page describes [FN-5].
+- No reference to the old numbers C8.8–C8.11 or C8.10.x is left in the sheets, README, PLAN, or ac sheets, and every relative link resolves.
+- **Not reviewed independently:** no reviewer subagent checked this fix.

@@ -85,17 +85,14 @@ Save now (Build step 2).
 
 > The paths in C3 and C5–C7 are the registry column names. Okta's KB screenshot shows Search Rows rows as flat objects keyed by column name, with `Row ID`, `Created`, and `Updated` beside them [FN-22]. ⚠ UNVERIFIED (U7): that this org returns the same shape, and that paths containing spaces work. P6-T4 scenario S1 checks both. If the shape differs, the executor gives you new paths for C3 and C5–C7.
 
-### C8 Branching – If/ElseIf [FN-6]
+### C8 Branching – If/Else [FN-5]: `gtr` or not
 
-Conditions (**Edit Conditions**):
-1. **value a** ← C5.output; **comparison** `equal to`; **value b** `gtr`.
-2. Add a second condition: **value a** ← C5.output; **comparison** `equal to`; **value b** `vendor`.
+An If/Else card takes one condition. So C8 tests for `gtr`, and its false branch holds a second If/Else, C8.7, that tests for `vendor`. Okta documents nesting an If/Else inside another [FN-5].
 
-Click **View Outputs** (top right) and add one output: `status code`, type Number. It shows one field for condition 1, one for condition 2, and one for Else. You fill each one at the end of its branch, below.
+- **Condition**: **value a** ← C5.output; **comparison** `equal to`; **value b** `gtr`. Click **Done**.
+- **Create Outputs**: add `status code`, type Number. You fill its true value at the end of the true branch and its false value at the end of the false branch, below.
 
-Open a branch with the **+** icon right of its condition, and switch branches with the dropdown at the top left.
-
-#### Branch 1: `gtr`
+#### True branch (upper, orange): `gtr`
 
 **C8.1 Text – Concatenate** [FN-13]. **Oauth mode only**; in static mode skip C8.1.
 - **text 1**: `Bearer`
@@ -145,7 +142,7 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
 - **View Outputs** on C8.6: add `status`, type Number.
   - Try field ← C8.6.1.Status Code
   - If Error field ← C8.6.2.output
-- Back in C8's outputs pane: the condition 1 field of `status code` ← C8.6.status.
+- In C8's outputs: the true value of `status code` ← C8.6.status.
 
 > The If Error page lists the error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. An Okta KB screenshot shows an API Connector call that got HTTP 500: the card errored into If Error, and the Error object held `code` 500 [KB-7].
 >
@@ -154,54 +151,65 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
 > - A wrapping 500 gives four SAML calls ending in `failure-retries-exhausted`.
 > - A missing `code` fails the SAML execution before it writes a row.
 >
-> The executor then gives you the right path for C8.6.2 and C8.10.2.
+> The executor then gives you the right path for C8.6.2 and C8.7.4.2.
 >
 > ⚠ UNVERIFIED: a request that fails with no HTTP status at all, such as a timeout, DNS, or TLS failure. If `code` is then missing or not a number, C8.6.2 may fail. The execution would end in an error without a Results row, and the dispatcher would skip the remaining apps [FN-19]. No PLAN task tests this yet; see the report, PA-6 and PC3.
 
-#### Branch 2: `vendor`
+#### False branch (lower, blue): not `gtr`
 
-**C8.7 Object – Construct**: the body object.
+Add one card here, C8.7. Everything else in this branch goes inside C8.7.
+
+**C8.7 Branching – If/Else**: `vendor` or neither
+
+- **Condition**: **value a** ← C5.output; **comparison** `equal to`; **value b** `vendor`. Click **Done**.
+- **Create Outputs**: add `status code`, type Number.
+
+##### C8.7 true branch (upper, orange): `vendor`
+
+**C8.7.1 Object – Construct**: the body object.
 
 | Input name | Type | Value |
 | --- | --- | --- |
 | `email` | Text | ← C4.output |
 
-**C8.8 JSON – Stringify**
-- **object** ← C8.7.output
+**C8.7.2 JSON – Stringify**
+- **object** ← C8.7.1.output
 - Its **output** is `{"email":"<user's email>"}`.
 
-**C8.9 Object – Construct**: the headers. The connection adds `X-API-Key`.
+**C8.7.3 Object – Construct**: the headers. The connection adds `X-API-Key`.
 
 | Input name | Type | Value |
 | --- | --- | --- |
 | `Content-Type` | Text | `application/json` |
 | `Accept` | Text | `application/json` |
 
-**C8.10 Error Handling – If Error**
+**C8.7.4 Error Handling – If Error**
 
 - **Try** section:
-  - **C8.10.1 API Connector – Raw Request**
+  - **C8.7.4.1 API Connector – Raw Request**
     - **Connection**: `POC-Mock Vendor (Custom Header)`
     - **URL** ← C6.output
     - **Method**: `POST`
-    - **Headers** ← C8.9.output
+    - **Headers** ← C8.7.3.output
     - **Query**: leave empty
-    - **Body** ← C8.8.output
+    - **Body** ← C8.7.2.output
 - **If Error** section:
-  - **C8.10.2 Object – Get**
-    - **object** ← the **Error** object of C8.10's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
+  - **C8.7.4.2 Object – Get**
+    - **object** ← the **Error** object of C8.7.4's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
     - **path**: `code`
     - **output**: Number
-- **View Outputs** on C8.10: add `status`, type Number.
-  - Try field ← C8.10.1.Status Code
-  - If Error field ← C8.10.2.output
-- In C8's outputs pane: the condition 2 field of `status code` ← C8.10.status.
+- **View Outputs** on C8.7.4: add `status`, type Number.
+  - Try field ← C8.7.4.1.Status Code
+  - If Error field ← C8.7.4.2.output
+- In C8.7's outputs: the true value of `status code` ← C8.7.4.status.
 
-#### Else branch
+##### C8.7 false branch (lower, blue): neither
 
-**C8.11 Flow Control – Assign** [FN-3]
+**C8.7.5 Flow Control – Assign** [FN-3]
 - Create one input: `status code`, type Number, value `0`.
-- In C8's outputs pane: the Else field of `status code` ← C8.11.status code.
+- In C8.7's outputs: the false value of `status code` ← C8.7.5.status code.
+
+**Finish C8:** in C8's outputs, the false value of `status code` ← C8.7.status code.
 
 ### C9 Branching – Lookup [FN-8]: classify the status
 
@@ -239,7 +247,7 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
 
 These are guide Step 2.5's rules: 2xx and 404 are success, 429 and 5xx are retried, and everything else is a failure, including 400, 401, 403, 422, `0`, and an empty status. The 2xx and 5xx codes are the standard ones listed on Okta's HTTP status codes page.
 
-⚠ UNVERIFIED: that an empty status gives `failure` rather than an error [FN-8]. Lookup's Value is required, and no page says what an empty one does. It matters only if C8.6.2 or C8.10.2 return nothing (U6), and scenario S2 catches that case.
+⚠ UNVERIFIED: that an empty status gives `failure` rather than an error [FN-8]. Lookup's Value is required, and no page says what an empty one does. It matters only if C8.6.2 or C8.7.4.2 return nothing (U6), and scenario S2 catches that case.
 
 ### C10 Branching – Assign If [FN-9]
 
@@ -369,15 +377,16 @@ Save. Then turn the flow on (Build step 4).
 
 - [ ] `POC-FBM Logout – Per App` is in folder `POC-ITP-FBM`. The **Flow Activation** button reads **Saving data**, and the flow is ON.
 - [ ] There are 16 top-level cards, C1–C16.
-  - C8 has three branches (`gtr`, `vendor`, Else) holding C8.1–C8.11.
-  - C8.6 and C8.10 each have a Try card and an If Error card.
+  - C8's true branch holds C8.1–C8.6, and its false branch holds only C8.7.
+  - C8.7's true branch holds C8.7.1–C8.7.4, and its false branch holds C8.7.5.
+  - C8.6 and C8.7.4 each have a Try card and an If Error card.
   - C15 has a true branch (C15.1–C15.4) and a false branch (C15.5).
 - [ ] C1 has exactly these inputs: `Row` (Object), `User profile` (Object), `Access token` (Text), `Attempt` (Number), `User ID` (Text).
 - [ ] C2 is the first card after C1, and value b is the real connection-account user ID.
 - [ ] No Continue If or Return card sits inside a branch or section.
-- [ ] C8.6.1 uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.10.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
-- [ ] C8.6 and C8.10 each output `status` (Number), with both the Try and If Error fields filled.
-- [ ] C8 outputs `status code` (Number), with the `gtr`, `vendor`, and Else fields filled.
+- [ ] C8.6.1 uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.7.4.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
+- [ ] C8.6 and C8.7.4 each output `status` (Number), with both the Try and If Error fields filled.
+- [ ] C8 and C8.7 each output `status code` (Number), with the true and false values filled.
 - [ ] C9 has 23 rows and Otherwise `failure`. C12 has 6 rows and Otherwise `failure`.
 - [ ] C15.4 calls this flow, with all five inputs mapped and outputs `Status code` (Number), `Outcome` (Text), `Attempts` (Number). C16 returns the same three names and types.
 - [ ] No secret is typed into any card.
@@ -385,6 +394,6 @@ Save. Then turn the flow on (Build step 4).
 ## Report to the executor
 
 - The flow is saved, Save all data is on, and the flow is ON.
-- The mode you built (oauth or static), and the connection shown on C8.6.1 and C8.10.1.
+- The mode you built (oauth or static), and the connection shown on C8.6.1 and C8.7.4.1.
 - Whether C15.4's Choose Flow dialog listed this flow.
 - Every card, field, option, or label that looked different from this sheet, with the exact text you saw.

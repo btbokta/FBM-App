@@ -27,7 +27,7 @@ Click paths and card-by-card builds for HUMAN tasks. The executor shows the shee
 - **Card numbers:**
   - **C3** means card 3 of the same flow.
   - **C8.6** is card 6 inside card 8's branches or sections.
-  - **C8.6.1** is card 1 inside card C8.6's sections, two levels down.
+  - **C8.6.1** is card 1 inside card C8.6's sections, two levels down. Each added number goes one level deeper, so **C8.7.4.1** is inside C8.7.4.
   - Cards added in a later part are numbered **B1**, …; the per-client sweep helper's cards are **H1**, ….
 - **Mappings:**
   - **← C4.output** means drag card C4's output field named `output` into the field. `>` separates groups on a card, as in **← C1.User Context > Okta User ID**.

@@ -40,7 +40,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 | FN-3 | Flow Control – Assign | Add function > Flow Control | ✅ |
 | FN-4 | Flow Control – Wait For | Add function > Flow Control | ✅ |
 | FN-5 | Branching – If/Else | Add function > Branching | ✅ |
-| FN-6 | Branching – If/ElseIf | Add function > Branching | ✅ |
+| FN-6 | Branching – If/ElseIf | Add function > Branching | Not used (see entry) |
 | FN-7 | Branching – Continue If | Add function > Branching | ✅ |
 | FN-8 | Branching – Lookup | Add function > Branching | ✅ |
 | FN-9 | Branching – Assign If | Add function > Branching | ✅ |
@@ -380,13 +380,14 @@ Categories and card names were checked against the [function reference](https://
 - **Source:** [Wait For](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_wait.htm)
 
 ### FN-5 Branching – If/Else
-- **Condition:** **value a**, **comparison**, **value b**; click **Done** to go on to the branches.
-- **Branches:** the upper orange container runs when the condition is true; the lower blue container runs when it's false.
+- **Condition:** one per card: **value a**, **comparison**, **value b**; click **Done** to go on to the branches.
+- **Branches:** the upper orange container runs when the condition is true; the lower blue container runs when it's false. An If/Else can be nested inside another If/Else's branch to get more paths; wf-01 C8 and C8.7 do this (page re-fetched 2026-10-28).
 - **Outputs:** **Create Outputs** adds fields to the whole If/Else, each with a name and a type. Fill a value for the true case and for the false case by dragging from that branch, or by clicking the box to pick from the outputs of steps in that branch.
 - **Operators used:** `equal to`. Set the types of value a and value b so the comparison works as intended; `80 > 9` is true as numbers and false as text.
 - **Source:** [If/Else](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_if.htm)
 
 ### FN-6 Branching – If/ElseIf
+- **Not used by the sheets.** On 2026-10-28 the builder couldn't add a second condition in the console, and reported that "workflow if/else cards only have a single condition". This page says **Edit Conditions** adds conditions but names no other control. wf-01 C8 now nests If/Else cards instead [FN-5]. Page re-fetched 2026-10-28; it still says what's recorded below.
 - **Conditions:** a list of conditions, each with **value a**, **comparison**, **value b**.
   - They're tested top to bottom, and only the first true one runs its branch; if none is true, **Else** runs.
   - Click the **+** icon right of a condition to open its branch. Use the dropdown at the top left to switch branches, or **Edit Conditions** to change or add conditions.
