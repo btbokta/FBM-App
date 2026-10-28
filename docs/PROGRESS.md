@@ -6,7 +6,7 @@ Status values: `todo`, `in_progress`, `done`, `blocked`, `skipped`. Update only 
 | --- | --- | --- | --- | --- | --- |
 | P0-T1 | Initialize repo and toolchain | AUTO | none | done | 2026-10-28: npm ci, typecheck, test exit 0; .env/keys/state ignored. .env.example blocked by permission rule, so docs/env.template stands in. npm cache ~/.npm has an EACCES file, so installs use --cache $TMPDIR/fbm-npm-cache. npm audit flags vercel (dev only; prod deps clean) |
 | P0-T2 | Env schema, preview-org guard, Okta client, and preflight | AUTO | P0-T1 | done | 2026-10-28: 23 tests pass, typecheck 0; okta.com URL aborts NOT_PREVIEW with exit 2. Real preflight also aborts NOT_PREVIEW: the configured org ends in .okta.com, not .oktapreview.com. Guard left unchanged; user decision needed (see P1-T1) |
-| P0-T3 | Keys, local secrets, findings, and clipboard helper | AUTO | P0-T2 | todo |  |
+| P0-T3 | Keys, local secrets, findings, and clipboard helper | AUTO | P0-T2 | done | 2026-10-28: 39 tests pass; setup:secrets set 16 keys, rerun is a no-op and the key is unchanged; keys/harness-private.pem is 0600; the public JWK has no private fields; secret:copy prints only lengths. Only the harness has a key pair (provisioner is an API token) |
 | P1-T1 | Confirm prerequisites and fill org values | HUMAN | P0-T3 | todo |  |
 | P1-T2 | Add the Okta API token to .env | HUMAN | P1-T1 | todo |  |
 | P1-T3 | Record org facts | VERIFY | P1-T2 | todo |  |

@@ -1,5 +1,6 @@
 import { loadEnv } from "./lib/env.js";
 import { assertPreviewOrg, runGuarded } from "./lib/guard.js";
+import { setFinding } from "./lib/findings.js";
 import { provisionerClient } from "./lib/okta.js";
 
 const record = process.argv.includes("--record");
@@ -14,18 +15,8 @@ const POLICY_CHECKS: PolicyCheck[] = [
   { type: "POST_AUTH_SESSION", label: "session protection policy", finding: "itp.postAuthSessionPolicyId" },
 ];
 
-async function saveFindings(values: Record<string, string>): Promise<void> {
-  const specifier = "./lib/findings.js";
-  let findings: { setFinding(key: string, value: string): void };
-  try {
-    findings = await import(specifier);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error("findings lib missing");
-    }
-    throw err;
-  }
-  for (const [key, value] of Object.entries(values)) findings.setFinding(key, value);
+function saveFindings(values: Record<string, string>): void {
+  for (const [key, value] of Object.entries(values)) setFinding(key, value);
   console.log(`recorded ${Object.keys(values).join(", ")}`);
 }
 
@@ -72,5 +63,5 @@ await runGuarded(async () => {
     if (record) console.log("not recording: a check failed");
     return;
   }
-  if (record) await saveFindings(found);
+  if (record) saveFindings(found);
 });
