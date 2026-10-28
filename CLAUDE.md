@@ -27,7 +27,7 @@ Don't do new research and don't redesign. If a task can't be done as written, st
 - **Preview org only.** Every script that calls Okta goes through `runGuarded(assertPreviewOrg)`. Terraform runs only through `npm run tf -- …`, never bare `terraform`, so the guard and the Terraform precondition both run. The provider pins `base_url = "oktapreview.com"`. If a guard aborts, stop; never edit `POC_EXPECTED_ORG_*` to make it pass.
 - **Small blast radius.** The entity risk rule and session protection's Groups impacted target only `POC-ITP-Test`. Session protection Status (Monitoring/Enforced) applies to the whole org. The org is dedicated, but set Enforced only in P9-T2 and restore it at teardown.
 - **Connection account.** `OKTA_WF_CONNECTION_USER_ID` must be excluded from every ITP rule (entity risk `users_excluded`, session protection `users.exclude`), must never be in `POC-ITP-Test`, and every flow has a Continue If card that refuses it.
-- **Least privilege.** Tests use `POC-Harness`. `POC-Provisioner` (Super Administrator) is for Terraform, `check` setup subcommands, `sp`, and teardown only.
+- **Least privilege.** Tests use `POC-Harness`. The Super Administrator API token in `OKTA_API_TOKEN` is for Terraform, `check` setup subcommands, `sp`, and teardown only (plan change 2026-10-27; PLAN.md D-SVC).
 - **Secrets.** They live only in `.env`, `keys/`, `state/`, Vercel env vars, and Workflows connections.
   - Never print a secret, token, private key, or client secret. Don't `cat .env`, don't echo env values, and don't run `terraform output` on sensitive outputs. Use `npm run env:check` to see what's set.
   - Never commit `.env`, `keys/`, `state/`, `.vercel/`, or Terraform state. Run `git status` before every commit.

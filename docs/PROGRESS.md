@@ -8,7 +8,7 @@ Status values: `todo`, `in_progress`, `done`, `blocked`, `skipped`. Update only 
 | P0-T2 | Env schema, preview-org guard, Okta client, and preflight | AUTO | P0-T1 | todo |  |
 | P0-T3 | Keys, local secrets, findings, and clipboard helper | AUTO | P0-T2 | todo |  |
 | P1-T1 | Confirm prerequisites and fill org values | HUMAN | P0-T3 | todo |  |
-| P1-T2 | Create the POC-Provisioner service app | HUMAN | P1-T1 | todo |  |
+| P1-T2 | Add the Okta API token to .env | HUMAN | P1-T1 | todo |  |
 | P1-T3 | Record org facts | VERIFY | P1-T2 | todo |  |
 | P1-T4 | Vercel token and plan | HUMAN | P0-T3 | todo |  |
 | P2-T1 | Scaffold mock app, config, and store | AUTO | P0-T1 | todo |  |

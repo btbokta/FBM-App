@@ -12,7 +12,7 @@ Do this after `npm run teardown -- --yes` and `npm run teardown:verify` have pas
    - `POC-FBM Logout – Per App`
 3. **Workflows tables and folder.** Delete `POC-FBM Logout Registry`, `POC-FBM Logout Results`, and `POC-Respond Probe`, then delete folder `POC-ITP-FBM`.
 4. **Workflows connections.** Delete `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-AS Token (Basic)` or `POC-Mock GTR Static (Custom Header)`, and `POC-Mock Vendor (Custom Header)`.
-5. **POC-Provisioner.** In the Admin Console, Applications > Applications > `POC-Provisioner`: **Deactivate**, then **Delete**.
+5. **Okta API token.** In the Admin Console, Security > API > Tokens: **Revoke** the `POC-Terraform` token (or whichever token you put in `OKTA_API_TOKEN`).
 6. **Vercel.** Delete the `POC-FBM-Mock` token. In the dashboard, confirm the project and the `poc-fbm-mock-kv` store are gone.
 7. **Local files.** In the repo root, run `rm -rf keys state .env mock-app/.vercel .vercel`.
 8. **Last look.** In System Log, filter `eventType eq "policy.entity_risk.action"` for the last 10 minutes and confirm nothing new. In Security > Entity Risk Policy, confirm no `POC-` rule remains.

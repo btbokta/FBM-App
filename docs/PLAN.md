@@ -14,7 +14,7 @@ A mock in-house app on Vercel stands in for the FBM apps. It signs users in thro
 | --- | --- |
 | Org | Dedicated Okta preview org; URL goes in `.env` (`OKTA_ORG_URL`) at P1-T1 |
 | ITP and Workflows plan | Confirmed at P1-T1. The plan fits Workflows Starter: at most 5 active flows (F39) |
-| Okta credentials | OAuth 2.0 service apps with private key JWT: `POC-Provisioner` (human-created) and `POC-Harness` (Terraform-created) |
+| Okta credentials | A Super Administrator's SSWS API token for Terraform and setup scripts (plan change 2026-10-27: throwaway org, so no provisioner service app); OAuth 2.0 service app `POC-Harness` with private key JWT for tests (Terraform-created) |
 | Language | TypeScript. Runtime is **Node 24, not Node 20**: Vercel stopped deploying Node 20 functions on 2026-10-01 (F60). Local scripts use Node 24 too, so one runtime covers everything |
 | Mock app host | Vercel, project default domain `https://<project>.vercel.app` |
 | Real SaaS test tenant | None. The vendor branch is exercised against the mock's API-key endpoint |
@@ -57,6 +57,7 @@ Every fact below was checked against the cited page on 2026-10-27. Tasks refer t
 | F13 | `GET /api/v1/users/{userId}/clients` (scope `okta.users.read`); `DELETE /api/v1/users/{userId}/clients/{clientId}/tokens` (scope `okta.users.manage`) revokes all refresh tokens for that user and client | [User resources API](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserResources/), [User OAuth API](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserOAuth/) |
 | F14 | `DELETE /api/v1/users/{userId}/sessions?oauthTokens=true` (scope `okta.users.manage`) revokes issued OIDC and OAuth refresh and access tokens | [User sessions API](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserSessions/) |
 | F15 | Service apps: `private_key_jwt` is the only client auth that can get Okta-scoped tokens; the app needs an admin role; client assertion `iss`=`sub`=client_id, `aud`=`https://{org}/oauth2/v1/token` | [OAuth for Okta service apps](https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/) |
+| F15a | SSWS API tokens inherit the privilege level of the admin who created them, are shown once, are valid for 30 days from creation or last use, can be restricted to a network range, and are deprovisioned when the creating account is deactivated. Okta recommends OAuth 2.0 over SSWS | [Create an API token](https://developer.okta.com/docs/guides/create-an-api-token/main/) |
 | F16 | New service apps have "Require DPoP" on by default; turn it off under General Settings > Proof of possession | [Okta KB: use_dpop_nonce](https://support.okta.com/help/s/article/receiving-use-dpop-nonce-error-when-requesting-access-token), [DPoP blog](https://developer.okta.com/blog/2024/10/23/dpop-oauth-node) |
 | F17 | Scope names used here: `okta.users.*`, `okta.groups.*`, `okta.apps.*`, `okta.appGrants.manage`, `okta.policies.*`, `okta.authorizationServers.*`, `okta.networkZones.*`, `okta.roles.*`, `okta.orgs.read`, `okta.schemas.read`, `okta.logs.read`, `okta.userRisk.read/manage`, `okta.universalLogout.manage` | [OAuth 2.0 scopes](https://developer.okta.com/docs/api/oauth2/) |
 | F18 | Custom role permissions `okta.workflows.invoke` ("view and run delegated flows") and `okta.workflows.read`; `okta.users.risk.manage`, `okta.users.risk.read` | [Permissions guide](https://developer.okta.com/docs/api/openapi/okta-management/guides/permissions/) |
@@ -75,6 +76,7 @@ Every fact below was checked against the cited page on 2026-10-27. Tasks refer t
 | ID | Fact | Source |
 | --- | --- | --- |
 | F28 | Provider auth by private key JWT: `org_name`, `base_url` (`oktapreview.com`), `client_id`, `private_key` (path or PEM), `private_key_id`, `scopes`; env vars `OKTA_ORG_NAME`, `OKTA_BASE_URL`, `OKTA_API_CLIENT_ID`, `OKTA_API_PRIVATE_KEY`, `OKTA_API_PRIVATE_KEY_ID`, `OKTA_API_SCOPES` (comma-separated) | [Provider docs](https://registry.terraform.io/providers/okta/okta/latest/docs) |
+| F28a | Provider auth by API token: `api_token` (env `OKTA_API_TOKEN`) with `org_name` and `base_url`. It is mutually exclusive with `access_token`, `client_id`, `private_key_id`, `private_key`, and `scopes`. The docs call SSWS "a legacy authorization scheme" and name no resource that needs OAuth | [Provider docs](https://github.com/okta/terraform-provider-okta/blob/master/docs/index.md) |
 | F29 | `okta_app_oauth` and `okta_app_saml` take `implicit_assignment` ("Enable Federation Broker Mode", Early Access) and `authentication_policy`. Open bug: `implicit_assignment = false` is never sent for OAuth apps, so FBM can't be turned off from Terraform (deleting the app is unaffected) | [app_oauth](https://registry.terraform.io/providers/okta/okta/latest/docs/resources/app_oauth), [app_saml](https://registry.terraform.io/providers/okta/okta/latest/docs/resources/app_saml), [issue 2967](https://github.com/okta/terraform-provider-okta/issues/2967) |
 | F30 | `okta_app_oauth`: `type` (`web`, `service`, …), `grant_types`, `response_types`, `redirect_uris`, `pkce_required`, `token_endpoint_auth_method`, `jwks`, `dpop_bound_access_tokens`, `refresh_token_rotation`, `refresh_token_leeway`, `omit_secret`; outputs `client_id`, `client_secret` (sensitive). `skip_authentication_policy` added in 6.9.0 | [app_oauth](https://registry.terraform.io/providers/okta/okta/latest/docs/resources/app_oauth), [CHANGELOG](https://github.com/okta/terraform-provider-okta/blob/master/CHANGELOG.md) |
 | F31 | `okta_app_signon_policy` (`name`, `description`, `catch_all` false makes the default rule DENY) and `okta_app_signon_policy_rule` (`access`, `factor_mode`, `constraints`, `groups_included`, `network_connection` ANYWHERE/ZONE/…, `network_includes`, `priority`, `re_authentication_frequency`) | [app_signon_policy](https://registry.terraform.io/providers/okta/okta/latest/docs/resources/app_signon_policy), [app_signon_policy_rule](https://registry.terraform.io/providers/okta/okta/latest/docs/resources/app_signon_policy_rule) |
@@ -151,6 +153,7 @@ Each item has a POC default and the task that settles it. The executor records t
 | U26 | API accepts `okta.workflows.invoke` as the Run delegated flow permission | P7-T5 | `soc.permissionName` |
 | U27 | Okta – Read User finds a user when given the email, because login equals email for POC users | P8-T4 (T4b) | `t4b.readUserByEmail` |
 | U28 | Vercel dashboard paths for tokens (Account Settings > Tokens) and project domains | P1-T4, P2-T5 | — |
+| U29 | Terraform with the SSWS token can create every resource in this plan (entity risk rule, custom roles, resource sets, role assignments, FBM apps); the provider docs name no exception (F28a) | P3-T1 – P3-T6, P7-T1, P7-T5 | — |
 
 ## 4. POC decisions
 
@@ -173,7 +176,7 @@ The guide leaves these open or the platform forces them. Each states the default
 | D-FALLBACK | Fallback variant | Not built | T6 fails thresholds → P10-T5..T7 |
 | D-SP | Session protection config | Snapshot by API, exclude the connection account by API, set Status / Run a workflow / Groups impacted in the UI (F6), verify by API, restore from the snapshot at teardown (F37) | — |
 | D-SP-TIMING | When session protection is enforced | Just before T3 (phase P9), so T1–T6 aren't disturbed by IP changes | — |
-| D-SVC | Okta credentials | `POC-Provisioner` (Super Administrator; used by Terraform and setup/teardown scripts only) and `POC-Harness` (Read-only Administrator plus a custom risk role scoped to `POC-ITP-Test`; used by tests). Both private key JWT, DPoP off | — |
+| D-SVC | Okta credentials | A Super Administrator SSWS API token in `OKTA_API_TOKEN` (used by Terraform and setup/teardown scripts only; replaces the `POC-Provisioner` service app because this is a throwaway org) and the `POC-Harness` service app (Read-only Administrator plus a custom risk role scoped to `POC-ITP-Test`; used by tests; private key JWT, DPoP off) | Terraform can't create a resource with the token (U29) → add a `POC-Provisioner` service app |
 | D-VERCEL | Mock hosting | One Vercel project named `poc-fbm-mock-<6 hex>`, Hono, Upstash Redis, Node 24 | Domain differs → set `MOCK_BASE_URL` from the dashboard (P2-T5) |
 
 ## 5. Architecture
@@ -281,7 +284,7 @@ FBM-App/
 - **Root npm scripts** (created in P0-T1; each points to a file a later task writes): `typecheck`, `test`, `preflight`, `env:check`, `setup:secrets`, `secret:copy`, `finding`, `tf`, `tf:sync-env`, `mock`, `check`, `tables:gen`, `poc`, `sp`, `report`, `teardown`, `teardown:verify`. Usage is `npm run <script> -- <args>`.
 - **Guard first:** every script that talks to Okta, and every Terraform run, calls `assertPreviewOrg()` first (P0-T2). Terraform also checks `okta_org_metadata` in a precondition (P3-T1) and pins `base_url = "oktapreview.com"`.
 - **Secrets:** values live only in `.env` (gitignored), `keys/` (gitignored), Terraform state in `state/` (gitignored), Vercel env vars, and Workflows connections. Scripts never print a secret or token. To move a secret into a UI field, a human runs `npm run secret:copy -- <name>`, which puts it on the macOS clipboard and prints only its length.
-- **Credentials:** Terraform, `check` setup subcommands, `sp`, `teardown`, and `teardown:verify` use `POC-Provisioner`. `poc` (tests) uses `POC-Harness`.
+- **Credentials:** Terraform, `check` setup subcommands, `sp`, `teardown`, and `teardown:verify` use the Super Administrator API token (`provisionerClient`). `poc` (tests) uses `POC-Harness`.
 - **Long observations:** `npm run poc -- <test> run|observe` can wait up to 9 minutes. Run it with a Bash timeout of 600000 ms; `observe` resumes from `state/runs/current-<test>.json` if it has to be rerun.
 - **Findings:** `npm run finding -- set <key> <value>` writes `reports/findings.json`; the report includes every key.
 - **Commits:** one per AUTO task, message `P<n>-T<m>: <task title>`.
@@ -293,7 +296,7 @@ FBM-App/
 | `OKTA_ORG_URL`, `POC_EXPECTED_ORG_URL` | P1-T1 | `https://<sub>.oktapreview.com`, identical, no trailing slash |
 | `POC_EXPECTED_ORG_ID` | P1-T1 | From `npm run preflight` output |
 | `OKTA_WF_CONNECTION_USER_ID` | P1-T1 | The super admin who authorizes the Workflows connections |
-| `OKTA_PROVISIONER_CLIENT_ID`, `OKTA_PROVISIONER_KEY_FILE`, `OKTA_PROVISIONER_KEY_ID` | P0-T3, P1-T2 | Key file `keys/provisioner-private.pem` |
+| `OKTA_API_TOKEN` | P1-T2 | SSWS token of a Super Administrator; you paste it into `.env` |
 | `OKTA_HARNESS_CLIENT_ID`, `OKTA_HARNESS_KEY_FILE`, `OKTA_HARNESS_KEY_ID` | P0-T3, P3-T6 | Client ID copied by `npm run tf:sync-env` |
 | `POC_USER_EMAIL_DOMAIN` | P1-T1 | Default `example.com` |
 | `POC_USER_PASSWORD` | P0-T3 | Generated, 24 chars |
@@ -314,10 +317,10 @@ Terraform variables come only from these through the wrapper (P3-T1): `expected_
 
 ### Okta API scopes
 
-- **POC-Provisioner** (granted by hand in P1-T2; used as `OKTA_API_SCOPES` for Terraform): `okta.users.manage`, `okta.users.read`, `okta.groups.manage`, `okta.groups.read`, `okta.apps.manage`, `okta.apps.read`, `okta.appGrants.manage`, `okta.policies.manage`, `okta.policies.read`, `okta.authorizationServers.manage`, `okta.authorizationServers.read`, `okta.networkZones.manage`, `okta.networkZones.read`, `okta.roles.manage`, `okta.roles.read`, `okta.orgs.read`, `okta.schemas.read`, `okta.logs.read` (F17).
+- **API token** (P1-T2): no scopes. It carries its Super Administrator owner's privileges (F15a).
 - **POC-Harness** (granted by Terraform in P3-T6): `okta.userRisk.read`, `okta.userRisk.manage`, `okta.logs.read`, `okta.users.read`, `okta.users.manage`, `okta.groups.read`, `okta.apps.read`, `okta.policies.read` (F17).
 
-Both lists live in `scripts/lib/scopes.ts` as `PROVISIONER_SCOPES` and `HARNESS_SCOPES`.
+The harness list lives in `scripts/lib/scopes.ts` as `HARNESS_SCOPES`.
 
 ## 7. Prerequisites checklist (before P0-T1)
 
@@ -390,39 +393,38 @@ The overview is below; the full task list follows. Owner is AUTO (executor), HUM
      4. Return `{ orgId, orgUrl }`.
      Export `runGuarded(main)`: on `GuardError` print `ABORT: <code>: <message>` to stderr and exit 2; on other errors print the redacted message and exit 1.
   3. `scripts/lib/redact.ts`: `redact(text)` replaces JWT-shaped strings (`eyJ…`) and any value of a `.env` key whose name contains `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` with `[redacted]`.
-  4. `scripts/lib/scopes.ts`: export `PROVISIONER_SCOPES` and `HARNESS_SCOPES` exactly as in §6.
-  5. `scripts/lib/okta.ts`: `class OktaClient({ orgUrl, clientId, keyFile, keyId, scopes, fetchFn })`.
+  4. `scripts/lib/scopes.ts`: export `HARNESS_SCOPES` exactly as in §6.
+  5. `scripts/lib/okta.ts`: `class OktaClient({ orgUrl, auth, fetchFn })`, where `auth` is `{ type: "ssws", token }` (sends `Authorization: SSWS <token>` and requests no token) or `{ type: "oauth", clientId, keyFile, keyId, scopes }`. The bullets below describe `oauth`.
      - `getToken()` signs a client assertion with `jose` (RS256, header `kid`, claims `iss` = `sub` = clientId, `aud` = `{orgUrl}/oauth2/v1/token`, `iat`, `exp` = +300 s, `jti` = random UUID) (F15) and POSTs form fields `grant_type=client_credentials`, `scope`, `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, `client_assertion` to `/oauth2/v1/token`. It caches the token until 60 s before expiry.
-     - If the error is `use_dpop_nonce` or `invalid_dpop_proof`, it throws `"DPoP is required on this service app; turn off Require DPoP (docs/build-sheets/ac-02-provisioner-service-app.md step 4)"` (F16).
+     - If the error is `use_dpop_nonce` or `invalid_dpop_proof`, it throws `"DPoP is required on this service app; set dpop_bound_access_tokens = false (infra/harness.tf)"` (F16).
      - `request(method, path, { query, body })` returns `{ status, headers, body }`. On 429 it waits until `X-Rate-Limit-Reset` (max 60 s) and retries, up to 5 attempts (F26). It never logs headers or bodies unredacted.
-     - Export `provisionerClient(env)` and `harnessClient(env)` factories.
-  6. `scripts/preflight.ts` (wrapped in `runGuarded`): run the guard, print `PASS guard org=<id> url=<url>`. If `OKTA_PROVISIONER_CLIENT_ID` is set, also:
-     - mint a provisioner token → `PASS token`
-     - `GET /api/v1/org` → `PASS org subdomain=<x>`
+     - Export `provisionerClient(env)` (`ssws`, from `OKTA_API_TOKEN`) and `harnessClient(env)` (`oauth`) factories.
+  6. `scripts/preflight.ts` (wrapped in `runGuarded`): run the guard, print `PASS guard org=<id> url=<url>`. If `OKTA_API_TOKEN` is set, also:
+     - `GET /api/v1/org` with the token → `PASS org subdomain=<x>` (a 401 means the token is wrong or expired, F15a)
      - `GET /api/v1/policies?type=ENTITY_RISK` has 1 item → `PASS ITP entity risk policy <id>` (F3)
      - `GET /api/v1/policies?type=POST_AUTH_SESSION` has 1 item → `PASS session protection policy <id>`
      With `--record`, write those IDs as findings `org.id`, `itp.entityRiskPolicyId`, `itp.postAuthSessionPolicyId` (uses P0-T3's findings lib; until then the flag errors with "findings lib missing").
   7. `scripts/env-check.ts`: print each schema key followed by `set` or `missing`, never a value.
-  8. Tests: `scripts/lib/guard.test.ts` (match; URL mismatch; `okta.com`; href mismatch; ID mismatch; fetch failure) and `scripts/lib/okta.test.ts` (assertion claims and `kid`; token cache; 429 retry honoring reset; DPoP error message; redaction of tokens in thrown errors).
+  8. Tests: `scripts/lib/guard.test.ts` (match; URL mismatch; `okta.com`; href mismatch; ID mismatch; fetch failure) and `scripts/lib/okta.test.ts` (SSWS sends `Authorization: SSWS <token>` and never logs it; assertion claims and `kid`; token cache; 429 retry honoring reset; DPoP error message; redaction of tokens in thrown errors).
 - **Acceptance check:** `npm test` passes with at least 11 tests, and `OKTA_ORG_URL=https://acme.okta.com POC_EXPECTED_ORG_URL=https://acme.okta.com npm run preflight; echo "exit=$?"` prints a line starting `ABORT: NOT_PREVIEW` and `exit=2`.
 - **Rollback:** `git revert` the commit.
 
 #### P0-T3 Keys, local secrets, findings, and clipboard helper
 - **Owner:** AUTO
 - **Depends on:** P0-T2
-- **Goal:** Generate the two service-app key pairs and every local random secret without ever displaying them.
+- **Goal:** Generate the harness key pair and every local random secret without ever displaying them.
 - **Inputs:** none.
 - **Steps:**
   1. `scripts/lib/dotenv-write.ts`: `setEnvValue(key, value)` updates or appends `KEY=value` in `.env`, keeps order and comments, and writes with mode 0600.
   2. `scripts/setup-secrets.ts`:
      1. If `.env` is missing, copy `.env.example`.
-     2. For `provisioner` and `harness`: if `keys/<name>-private.pem` is missing, generate RS256 2048-bit keys with `jose.generateKeyPair('RS256', { extractable: true })`. Write the PKCS#8 PEM with mode 0600. Write the public JWK with `kid` = `poc-<name>-<YYYYMMDD>`, `use` = `sig`, `alg` = `RS256` to `keys/<name>.public.jwk.json`. Set `OKTA_<NAME>_KEY_FILE` and `OKTA_<NAME>_KEY_ID` if empty.
+     2. For `harness` (`<name>` below; the provisioner is an API token, so it has no key pair): if `keys/<name>-private.pem` is missing, generate RS256 2048-bit keys with `jose.generateKeyPair('RS256', { extractable: true })`. Write the PKCS#8 PEM with mode 0600. Write the public JWK with `kid` = `poc-<name>-<YYYYMMDD>`, `use` = `sig`, `alg` = `RS256` to `keys/<name>.public.jwk.json`. Set `OKTA_<NAME>_KEY_FILE` and `OKTA_<NAME>_KEY_ID` if empty.
      3. If empty, set `POC_USER_PASSWORD` (24 chars with at least one upper, lower, digit, and one of `!#%+-=`), `MOCK_TEST_API_KEY`, `MOCK_VENDOR_API_KEY`, `MOCK_GTR_STATIC_BEARER` (32 random bytes, base64url), and `VERCEL_PROJECT_NAME` (`poc-fbm-mock-` + 6 lowercase hex). Also set `POC_BURST_USER_COUNT=25`, `GTR_AUTH_MODE=oauth`, `POC_T6_MAX_SECONDS=60`, `POC_T6_MEDIAN_SECONDS=30`, `POC_OBSERVE_TIMEOUT_SECONDS=300`, `POC_ENABLE_CLIENT_CREDENTIALS=true`, `POC_SOC_INCLUDE_RESPOND=true`, `POC_FALLBACK_MODE=false`, `POC_USER_EMAIL_DOMAIN=example.com` if empty.
      4. Print only the names it set.
   3. `scripts/lib/findings.ts` and `scripts/finding.ts`: `set <key> <value>` and `get <key>` on `reports/findings.json` (sorted keys, each `{ value, at }`); `list` prints all.
-  4. `scripts/copy-secret.ts <source>`: `<ENV_NAME>` copies that `.env` value; `bearer:<ENV_NAME>` copies `Bearer <value>`; `jwk:<provisioner|harness>` copies the public JWK file contents. It pipes to `pbcopy` and prints `copied <source> (<n> chars)`. (`tf:<output>` is added in P3-T1.)
+  4. `scripts/copy-secret.ts <source>`: `<ENV_NAME>` copies that `.env` value; `bearer:<ENV_NAME>` copies `Bearer <value>`; `jwk:harness` copies the public JWK file contents. It pipes to `pbcopy` and prints `copied <source> (<n> chars)`. (`tf:<output>` is added in P3-T1.)
   5. Tests for `setEnvValue` (update, append, comment preservation) and the password rule.
-- **Acceptance check:** after `npm run setup:secrets`, `npm run env:check` shows `set` for every key named in step 2.3 plus the two `KEY_FILE` and two `KEY_ID` keys. `ls -l keys/*-private.pem` shows `-rw-------` for both files, and `git status --porcelain` lists nothing under `keys/` or `.env`.
+- **Acceptance check:** after `npm run setup:secrets`, `npm run env:check` shows `set` for every key named in step 2.3 plus `OKTA_HARNESS_KEY_FILE` and `OKTA_HARNESS_KEY_ID`. `ls -l keys/*-private.pem` shows `-rw-------`, and `git status --porcelain` lists nothing under `keys/` or `.env`.
 - **Rollback:** delete `keys/` and the values this task set in `.env`; `git revert` the commit.
 
 ### P1 Access and accounts
@@ -440,17 +442,17 @@ The overview is below; the full task list follows. Owner is AUTO (executor), HUM
 - **Acceptance check:** `npm run env:check` shows `set` for `OKTA_ORG_URL`, `POC_EXPECTED_ORG_URL`, `POC_EXPECTED_ORG_ID`, `OKTA_WF_CONNECTION_USER_ID`, `POC_USER_EMAIL_DOMAIN`, and `POC_DENY_ZONE_CIDR`. `npm run preflight` prints `PASS guard` with the same org ID. Free active-flow slots are at least 5.
 - **Rollback:** clear the values in `.env`.
 
-#### P1-T2 Create the POC-Provisioner service app
+#### P1-T2 Add the Okta API token to .env
 - **Owner:** HUMAN
 - **Depends on:** P1-T1
-- **Goal:** Create the super-admin service app that Terraform and setup scripts use.
-- **Inputs:** [ac-02](build-sheets/ac-02-provisioner-service-app.md); `keys/provisioner.public.jwk.json`.
+- **Goal:** Give Terraform and the setup scripts a Super Administrator API token.
+- **Inputs:** [ac-02](build-sheets/ac-02-api-token.md); F15a.
 - **Steps:**
   1. The executor shows ac-02 and stops.
-  2. The human completes it and sets `OKTA_PROVISIONER_CLIENT_ID`.
+  2. The human creates or reuses a Super Administrator token and sets `OKTA_API_TOKEN`.
   3. The executor runs `npm run preflight`.
-- **Acceptance check:** `npm run preflight` prints `PASS guard`, `PASS token`, `PASS org`, `PASS ITP entity risk policy`, and `PASS session protection policy`.
-- **Rollback:** deactivate and delete `POC-Provisioner` in the Admin Console (ac-09).
+- **Acceptance check:** `npm run preflight` prints `PASS guard`, `PASS org`, `PASS ITP entity risk policy`, and `PASS session protection policy`.
+- **Rollback:** revoke the token in the Admin Console (ac-09).
 
 #### P1-T3 Record org facts
 - **Owner:** VERIFY
@@ -672,7 +674,7 @@ Mock app contract (applies to P2-T1 – P2-T4):
 - **Owner:** AUTO
 - **Depends on:** P1-T3
 - **Goal:** Make Terraform runnable only through a wrapper that enforces the preview-org guard, with state local and gitignored.
-- **Inputs:** F28, F38; `PROVISIONER_SCOPES`.
+- **Inputs:** F28, F28a, F38.
 - **Steps:**
   1. `infra/versions.tf`: `terraform { required_version = ">= 1.6" required_providers { okta = { source = "okta/okta", version = "~> 7.0" } } backend "local" { path = "../state/terraform.tfstate" } }`.
   2. `infra/providers.tf`: `provider "okta" { base_url = "oktapreview.com" }`. The other settings come from `OKTA_*` env vars (F28).
@@ -685,7 +687,7 @@ Mock app contract (applies to P2-T1 – P2-T4):
      - `soc_include_respond`: bool, default true.
   4. `infra/guard.tf`: `data "okta_org_metadata" "current" {}` and `resource "terraform_data" "org_guard"` with a `lifecycle { precondition { condition = data.okta_org_metadata.current.id == var.expected_org_id && trimsuffix(data.okta_org_metadata.current.domains.organization, "/") == var.expected_org_url, error_message = "ABORT: Terraform is not pointed at the configured preview org." } }`.
   5. `scripts/lib/tf.ts` and `scripts/tf.ts`: `npm run tf -- <args>` runs `runGuarded` → `assertPreviewOrg`.
-     - It builds the env: `OKTA_ORG_NAME` = the subdomain, `OKTA_BASE_URL=oktapreview.com`, `OKTA_API_CLIENT_ID`, `OKTA_API_PRIVATE_KEY` (absolute key file path), `OKTA_API_PRIVATE_KEY_ID`, `OKTA_API_SCOPES` (comma-joined `PROVISIONER_SCOPES`), and `TF_VAR_*` exactly per the mapping in §6. Empty `.env` values are omitted so variable defaults apply.
+     - It builds the env: `OKTA_ORG_NAME` = the subdomain, `OKTA_BASE_URL=oktapreview.com`, `OKTA_API_TOKEN` (passed through from `.env`, never printed), and `TF_VAR_*` exactly per the mapping in §6. Empty `.env` values are omitted so variable defaults apply.
      - It spawns `terraform -chdir=infra <args>` with stdio inherited.
      - It refuses `output` when the args name a sensitive output (`oidc_client_secret`, `dispatcher_client_secret`) or use `-json`.
      - Export `getOutputs()` (runs `terraform output -json` with piped stdout, returns parsed values in memory, never prints).
@@ -1081,7 +1083,7 @@ Run record schema (P5-T2) used by every test: `{ test, runId, startedAt, finishe
         - `Okta GTR` rows with status 204 per run;
         - T7 per-user Results rows (one `Okta GTR`, one success per enabled app, saml with one `retry` row).
      5. Decisions (D-RISK, D-SWEEP, D-EMAIL, D-FALLBACK), each with the outcome, evidence, and recommendation in one sentence.
-     6. Unverified assumptions U1–U28 with their finding values, or "not settled".
+     6. Unverified assumptions U1–U29 with their finding values, or "not settled".
      7. Residual risks copied from §10 with anything the tests changed.
   3. Fixture-based test producing a snapshot.
 - **Acceptance check:** `npm test` passes, and `npm run report -- --fixtures` writes `reports/poc-results.fixture.md` containing the seven section headings.
@@ -1536,7 +1538,7 @@ Do each task only when its trigger holds; otherwise mark it `skipped` with the f
 #### P11-T6 Console teardown checklist
 - **Owner:** HUMAN
 - **Depends on:** P11-T5
-- **Goal:** Remove what code can't: Workflows objects, the session protection UI settings, the provisioner app, the Vercel token, and local secrets.
+- **Goal:** Remove what code can't: Workflows objects, the session protection UI settings, the Okta API token, the Vercel token, and local secrets.
 - **Inputs:** [ac-09](build-sheets/ac-09-teardown.md).
 - **Steps:** The executor shows ac-09 and stops; the human completes it and reports each item.
 - **Acceptance check:** the human reports every ac-09 item done.
@@ -1567,7 +1569,7 @@ User allocation: user01 for T1, T3, T5 (interactive); user02 for the probe and d
 | R5 | Workflows Starter allows 5 active flows; the POC uses 4, or 5 with the fallback; the per-client sweep would need a sixth | Low / Medium | P1-T1 checks headroom; P10-T3 blocks and proposes `user-sessions` |
 | R6 | Session protection Status is org-wide (U14); Enforced changes behavior for every user | Low (dedicated org) / Medium | Enforced only from P9-T2 to teardown; original settings recorded and restored (ac-07 §4, `sp restore`) |
 | R7 | The Workflows connection account gets logged out, breaking every connection (F52) | Low / High | Excluded from the entity risk rule and session protection rule; never in `POC-ITP-Test`; guard card in every flow |
-| R8 | `POC-Provisioner` holds Super Administrator | Low / High | Key file mode 0600, gitignored; used only by Terraform and setup scripts; tests use `POC-Harness`; deleted in ac-09 |
+| R8 | The API token carries a Super Administrator's full privileges and expires 30 days after last use | Low / High | Lives only in `.env` (mode 0600, gitignored); used only by Terraform and setup scripts; tests use `POC-Harness`; optional network restriction to this computer; revoked in ac-09 |
 | R9 | Vercel Hobby forbids commercial use (F66) | Medium / Low | Prerequisite: use a Pro team for paid work |
 | R10 | Workflows has no latency SLA; T6 varies run to run | High / Low | Four samples, thresholds in `.env`, exact numbers from the Results export |
 | R11 | System Log events arrive late (F9) | Medium / Low | Polling with a 300 s default timeout; `observe` phases resumable |
@@ -1590,6 +1592,6 @@ One command removes everything code created; a short checklist covers the rest.
    1. Session protection UI back to the recorded settings.
    2. Turn off and delete the Workflows folder `POC-ITP-FBM` (flows and tables).
    3. Delete the POC connections.
-   4. Deactivate and delete `POC-Provisioner`.
+   4. Revoke the Okta API token.
    5. Delete the Vercel token.
    6. Delete `keys/`, `.env`, and `state/` locally.

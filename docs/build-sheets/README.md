@@ -5,7 +5,7 @@ Click paths and card-by-card builds for HUMAN tasks. The executor shows the shee
 | Sheet | Used by |
 | --- | --- |
 | [ac-01 Prerequisites and org values](ac-01-prerequisites-and-org-values.md) | P1-T1 |
-| [ac-02 POC-Provisioner service app](ac-02-provisioner-service-app.md) | P1-T2 (contingency for P3-T6) |
+| [ac-02 Okta API token](ac-02-api-token.md) | P1-T2 (contingency for P3-T6) |
 | [ac-03 Vercel](ac-03-vercel.md) | P1-T4, P2-T5, P2-T6 |
 | [ac-04 Test-user sign-in and T1/T5 steps](ac-04-test-user-sign-in.md) | P4-T3, P8-T1, P8-T3 |
 | [ac-05 Entity risk rule check and probe](ac-05-entity-risk-rule-and-probe.md) | P7-T3 (contingency for P7-T1) |
