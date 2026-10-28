@@ -3,6 +3,8 @@ import type { JWTVerifyGetKey } from "jose";
 import { isAsConfigured, isOidcConfigured, type Config } from "./config.js";
 import { registerGtrRoutes } from "./gtr.js";
 import { StoreMissingError, type Store } from "./store.js";
+import { registerTestApi } from "./test-api.js";
+import { registerVendorRoutes } from "./vendor.js";
 
 export const SERVICE_NAME = "poc-fbm-mock";
 export const VERSION = "0.1.0";
@@ -39,6 +41,8 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   registerGtrRoutes(app, deps);
+  registerVendorRoutes(app, deps);
+  registerTestApi(app, deps);
 
   return app;
 }
