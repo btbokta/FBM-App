@@ -19,9 +19,14 @@ Saving all data puts the test users' emails and the 5-minute access token from C
 
 ## Build
 
-1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5].
-2. Click the pencil icon beside `Unnamed` and type `POC-FBM Logout – Per App`.
-3. Build C1. Then click **Save**. In the **Save flow** dialog, turn on **Save all data that passes through the flow**, and save.
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5]. Don't rename it with the pencil icon; the first Save names it.
+2. Build C1. Then click **Save** [SCR-5, SCR-6]. In the **Save flow** dialog:
+   - Type the name `POC-FBM Logout – Per App`.
+   - Turn on **Save all data that passes through the flow**; Okta's tutorial calls it **Save All Data**.
+   - Click **Save**.
+
+   If a naming dialog opens before you add C1, do the same there.
+3. Check that the **Flow Activation** button on the navigation bar reads **Saving data**. If it reads **Not saving data**, open it and turn on **Save all data that passes through the flow** [SCR-6].
 4. Build C2 to C16 in order. Add each card with **Add function** > *category* > *card*. Inside a branch or section, add cards the same way.
 5. **Save**, work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
 
@@ -39,7 +44,7 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, click **Cl
 | `Attempt` | Number |
 | `User ID` | Text |
 
-Save now (Build step 3).
+Save now (Build steps 2 and 3).
 
 ### C2 Branching – Continue If [FN-7]: connection-account guard
 
@@ -59,6 +64,7 @@ Save now (Build step 3).
 - **object** ← C1.User profile
 - **path** ← C3.output
 - **output**: Text. This is the user's identifier value, for example the email address.
+- ⚠ UNVERIFIED: if the profile lacks that attribute, whether C4 returns empty or fails the execution [FN-11]. Every POC user has `email`, so the POC never hits this; see the report, trace PA-10.
 
 ### C5 Object – Get
 
@@ -142,7 +148,14 @@ Open a branch with the **+** icon right of its condition, and switch branches wi
   - If Error field ← C8.6.2.output
 - Back in C8's outputs pane: the condition 1 field of `status code` ← C8.6.status.
 
-> Okta documents the If Error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. ⚠ UNVERIFIED (U6): whether a non-2xx response makes Raw Request error, and whether `code` then holds the HTTP status. Mapping both sections into `status` covers either behavior. In scenario S2 the executor asks you to paste the error object; if the status is somewhere else, you'll get a new path for C8.6.2 and C8.10.2.
+> The If Error page lists the error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. But an Okta KB screenshot shows the object without `code`, and Okta-card errors can wrap the API's status in a 500.
+>
+> ⚠ UNVERIFIED (U6): whether a non-2xx response makes Raw Request error, and whether `code` then holds the HTTP status. Mapping both sections into `status` covers both error behaviors. Scenario S2 forces a 422 and shows which case applies:
+> - The right path gives one SAML call and one Results row (422, failure).
+> - A wrapping 500 gives four SAML calls ending in `failure-retries-exhausted`.
+> - A missing `code` fails the SAML execution before it writes a row.
+>
+> The executor then gives you the right path for C8.6.2 and C8.10.2.
 
 #### Branch 2: `vendor`
 
@@ -298,7 +311,7 @@ The output you use is **date** (Date & Time).
 - **number 2**: `1`
 
 **C15.4 Flow Control – Call Flow** [FN-1]
-- **Helper Flow**: **Choose Flow** > `POC-FBM Logout – Per App`, this same flow. It's listed because you saved after C1.
+- **Helper Flow**: **Choose Flow** > `POC-FBM Logout – Per App`, this same flow. Saving after C1 should make it appear in the list. ⚠ UNVERIFIED: no doc says so [SCR-8]. If it isn't listed, save again and reopen the dialog; if it's still missing, stop and tell the executor.
 - **With these inputs**:
 
 | Input | Value |

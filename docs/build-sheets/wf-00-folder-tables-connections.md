@@ -7,7 +7,13 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which 
 ## Before you start
 
 1. Sign in to the Admin Console as the **connection account**, `<OKTA_WF_CONNECTION_USER_ID>`. It's the super admin that authorizes the Okta connections, so every rule and flow in the POC refuses it [CON-1, KB-6].
-2. Open Admin Console > **Workflow** > **Workflows console**. Stay on the **Flows** page [SCR-1].
+2. Look at the scopes of the existing **Okta Workflows OAuth** app, without changing anything [SCR-12]: Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Okta API Scopes** tab. Find these three scopes. A granted scope offers **Revoke** and one that isn't granted offers **Grant**; don't click either.
+   - `okta.users.read`: needed by Read User and by the dispatcher's Custom API Action.
+   - `okta.schemas.read`: needed by Read User.
+   - `okta.users.manage`: needed only if P10-T3 adds the token sweep.
+
+   If `okta.users.read` or `okta.schemas.read` isn't granted, stop and tell the executor; granting a scope changes an existing app and needs approval [API-6].
+3. Open Admin Console > **Workflow** > **Workflows console**. Stay on the **Flows** page [SCR-1].
 
 ## 1. Folder
 
@@ -77,7 +83,13 @@ Leave it empty.
 
 ## 3. Connections
 
-Create every connection **from the folder**, so the folder's flows can use it [SCR-4]: folder `POC-ITP-FBM` > **Connections** tab > **New Connection** > click the connector's icon. Don't create them on the org-level Connections page. A connection created there can't be used in a folder until it's added to one.
+Create each connection on the Workflows Console **Connections** page and give folder `POC-ITP-FBM` access to it [SCR-4]. A connection that isn't added to the folder can't be used by the folder's flows.
+
+1. On the **Connections** page, click **New Connection**, then click the connector's icon.
+2. Click **Folder Access (optional)** and select `POC-ITP-FBM`.
+3. Fill in the fields given below for that connection, then click **Create**.
+
+If you missed Folder Access, find the connection on the Connections page, click **Open** next to its connector, and use **Assign Folders** to add `POC-ITP-FBM`. If your folder has its own **Connections** tab, creating the connection there also works; it's then usable only in that folder.
 
 | Connection | Connector | Auth type | Create when |
 | --- | --- | --- | --- |
@@ -91,7 +103,7 @@ Create every connection **from the folder**, so the folder's flows can use it [S
 ### `POC-Okta` (Okta connector) [CON-1]
 
 1. In a second tab, read the client credentials from the **existing** Okta Workflows OAuth app, without changing anything there [SCR-12]: Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Sign On** tab > **Client ID** and **Client secret**. Copy them straight into the dialog below; they never go into the repo or the chat.
-2. In the folder's Connections tab: **New Connection** > **Okta**.
+2. On the Connections page: **New Connection** > **Okta**. Under **Folder Access (optional)**, select `POC-ITP-FBM`.
 3. In the New Connection window:
    - **Connection Nickname**: `POC-Okta`.
    - **Domain**: `<org subdomain>.oktapreview.com`, with no `https://` and no `-admin`.
@@ -103,16 +115,17 @@ If creation fails with an authorization error, the connection account may not be
 
 ### `POC-Okta ITP` (Okta ITP connector) [CON-2]
 
-Repeat the `POC-Okta` steps with **New Connection** > **Okta ITP**, Connection Nickname `POC-Okta ITP`, the same Domain, Client ID, and Client Secret, and **Use default scopes**.
+Repeat the `POC-Okta` steps with **New Connection** > **Okta ITP**, Folder Access `POC-ITP-FBM`, Connection Nickname `POC-Okta ITP`, the same Domain, Client ID, and Client Secret, and **Use default scopes**.
 
 ### API Connector connections [CON-3]
 
 For each connection below:
 
 1. Click **New Connection** > **API Connector**.
-2. Enter the nickname.
-3. Choose the auth type from the dropdown.
-4. Fill in its values and click **Create**.
+2. Under **Folder Access (optional)**, select `POC-ITP-FBM`.
+3. Enter the nickname.
+4. Choose the auth type from the dropdown.
+5. Fill in its values and click **Create**.
 
 If the selector has no **API Connector** icon, skip these three for now. Create each one later from the **+ New Connection** button on the first Raw Request card that uses it, with the same values. That card is in wf-01 for `POC-API None`, `POC-Mock Vendor (Custom Header)`, and `POC-Mock GTR Static (Custom Header)`, and in wf-02 for `POC-AS Token (Basic)`. Tell the executor.
 
@@ -135,11 +148,12 @@ Workflows doesn't test API Connector connections when you create them. The first
 - [ ] Folder `POC-ITP-FBM` exists.
 - [ ] `POC-FBM Logout Registry` has 6 columns with the types above and 4 rows, with Enabled true, true, true, false.
 - [ ] `POC-FBM Logout Results` has 5 columns and `POC-Respond Probe` has 7 columns, with the types above. Both are empty.
-- [ ] The folder's Connections tab lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode.
+- [ ] The Connections page lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode, each with access to folder `POC-ITP-FBM`.
 - [ ] You typed or pasted a secret only into a connection dialog, never into a table, a card, or the chat.
 
 ## Report to the executor
 
+- Okta Workflows OAuth: which of `okta.users.read`, `okta.schemas.read`, and `okta.users.manage` are granted.
 - Registry: the row count, the Enabled value of each row (U8), and any cell you fixed by hand.
 - Results and Probe: created and empty.
 - Each connection: its name, its connector, and the status it shows. Okta and Okta ITP should show as healthy; API Connector connections aren't tested yet.

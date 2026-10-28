@@ -16,9 +16,14 @@ The flow starts on the User Risk Detected event. It applies the same conditions 
 
 ## Build
 
-1. Open folder `POC-ITP-FBM` and click **+ New Flow**. Click the pencil icon beside `Unnamed` and type `POC-ITP FBM – Risk Detected (fallback)` [SCR-5].
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5]. Don't rename it with the pencil icon; the first Save names it.
 2. Build C1–C14, all at the top level.
-3. Click **Save**, turning on **Save all data that passes through the flow** in the Save flow dialog.
+3. Click **Save** [SCR-5, SCR-6]. In the **Save flow** dialog:
+   - Type the name `POC-ITP FBM – Risk Detected (fallback)`.
+   - Turn on **Save all data that passes through the flow** (**Save All Data**).
+   - Click **Save**.
+
+   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
 4. Work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].

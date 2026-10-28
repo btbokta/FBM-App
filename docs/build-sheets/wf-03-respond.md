@@ -15,15 +15,20 @@ You build it in up to three passes:
 | Flow name | `POC-ITP FBM – Respond` (en dash) |
 | Kind | Delegated flow: its event card is Delegated Flow [EVT-2]. ITP supports only delegated flows |
 | Save all data that passes through the flow | On. ac-04 and ac-06 ask you to read the Global Token Revocation status from its executions [SCR-6] |
-| Turn on | At the end of Part A. The flow must be on before ITP can list it and before the Run button works [EVT-2, SCR-11] |
+| Turn on | At the end of Part A. Okta's ITP steps turn the flow on before a rule uses it [EVT-2], and the Run button works only while it's on [SCR-11]. Whether ITP lists a flow that's off is U2 |
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
 ## Part A: probe version (P6-T5)
 
-1. Open folder `POC-ITP-FBM` and click **+ New Flow**. Click the pencil icon beside `Unnamed` and type `POC-ITP FBM – Respond` [SCR-5].
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5]. Don't rename it with the pencil icon; the first Save names it.
 2. Build C1–C4.
-3. Click **Save**. In the Save flow dialog, turn on **Save all data that passes through the flow**.
+3. Click **Save** [SCR-5, SCR-6]. In the **Save flow** dialog:
+   - Type the name `POC-ITP FBM – Respond`.
+   - Turn on **Save all data that passes through the flow** (**Save All Data**).
+   - Click **Save**.
+
+   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
 4. Work through the Part A checklist, then switch **Flow is OFF** to ON [SCR-7].
 
 ### C1 Delegated Flow (event) [EVT-2]
@@ -128,7 +133,8 @@ From here on, **C5 target** means C5.target user id under outcomes A and C1, and
 - **Try** section:
   - **C8.1 Okta ITP – Global Token Revocation** [ACT-1]
     - **Connection**: `POC-Okta ITP`
-    - **User > ID** ← C5 target. This is the `opaque` format. If ISS and SUB fields are also shown, leave them empty.
+    - **User > ID** ← C5 target. This is the `opaque` format.
+    - ⚠ UNVERIFIED: how the card asks for the format [ACT-1]. If it offers a format or protocol choice, choose the one with the ID field (`opaque`). If ISS or SUB still show as required, stop and tell the executor.
 - **If Error** section:
   - **C8.2 Flow Control – Assign**: create `gtr error status`, type Number, value `0`.
 - **View Outputs** on C8: add `gtr status`, type Number.

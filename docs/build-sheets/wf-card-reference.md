@@ -98,14 +98,18 @@ Every card, event, connector action, connection type, console screen, and platfo
   - Changes save immediately.
 - **Sources:** [Create and edit a table](https://help.okta.com/wf/en-us/content/topics/workflows/build/create-table.htm), [Import data from a CSV file](https://help.okta.com/wf/en-us/content/topics/workflows/build/import-from-csv.htm)
 
-### SCR-4 Connections: folder-level and org-level
-- **Folder-level:** Flows page > select the folder > **Connections** tab > **New Connection** > click the connector's icon. Only flows in that folder can use these connections.
-- **Org-level:** **Connections** page > **New Connection** > connector icon > **Folder Access (optional)**. An org-level connection can't be used until it's added to a folder; **Assign Folders** adds it later.
+### SCR-4 Connections: org-level and folder-level
+- **Org-level (the sheets' route):** Workflows Console **Connections** page > **New Connection** > click the connector's icon > fill in the connection > **Folder Access (optional)**: select the folders that may use it.
+  - An org-level connection can't be used until it's added to a folder.
+  - On the Connections page, **Open** next to a connector, then **Assign Folders**, adds an existing connection to a folder later.
+  - The Okta and Okta ITP authorization pages also start from the Connections page.
+- **Folder-level:** Flows page > select the folder > **Connections** tab > **New Connection**. Only flows in that folder can use these connections.
+- ⚠ UNVERIFIED: whether a folder has a Connections tab at all. The Configure a connection page documents one, but the "Flows and tables" page says a folder shows only two tabs, Flows and Tables. The sheets use the org-level route, which works either way.
 - **On a card:**
   - The connection name shows at the top of the card; click it to change the connection.
   - A red icon means the connection isn't working or options are missing; a green check means it's healthy.
   - When you first add a card, the connection you last used for that app is preselected.
-- **Sources:** [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm), [Connections](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-applications-connections.htm)
+- **Sources:** [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm), [Connections](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-applications-connections.htm), [Flows and tables](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-folder-view.htm), [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm)
 
 ### SCR-5 New flow, naming, saving
 - **Where:** in a folder, **+ New Flow**.
@@ -113,13 +117,14 @@ Every card, event, connector action, connection type, console screen, and platfo
   - In the first card, **Add Event**.
   - Later cards are added with **Add app action** or **Add function**. The help tutorial's path for a second card is **Add Another > Function > Text > Compose**.
   - Cards inside a branch or section are added the same way as in the flow.
-- **Name:** click the pencil icon beside the flow name (default `Unnamed`), or name it when you first save.
+- **Name:** if the flow has no name yet, clicking **Save** lets you name it there. In Okta's tutorial, that naming step is also where you select **Save All Data**, then click **Save** [SCR-6]. The pencil icon beside the flow name (default `Unnamed`) edits the flow's properties instead. The sheets don't use the pencil, so the first Save still asks for a name.
 - **Save:** the **Save** button at the top of the flow builder, or Ctrl+S / ⌘+S.
-- **Sources:** [Build and test a flow](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-build-a-flow.htm), [Create delegated flows for policy actions](https://help.okta.com/oie/en-us/content/topics/itp/workflows-itp-create-delegated-flows.htm), [Cards in flows](https://help.okta.com/wf/en-us/Content/Topics/Workflows/learn/about-cards.htm), [Add a helper flow (tutorial)](https://help.okta.com/wf/en-us/content/topics/workflows/Tutorials/processjson-walkthrough/add-helper-flow.htm)
+- **Sources:** [Build and test a flow](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-build-a-flow.htm), [Build a user creation flow (tutorial)](https://help.okta.com/wf/en-us/content/topics/workflows/tutorials/timebasedactions-walkthrough/build-user-creation-flow.htm), [Create delegated flows for policy actions](https://help.okta.com/oie/en-us/content/topics/itp/workflows-itp-create-delegated-flows.htm), [Cards in flows](https://help.okta.com/wf/en-us/Content/Topics/Workflows/learn/about-cards.htm), [Add a helper flow (tutorial)](https://help.okta.com/wf/en-us/content/topics/workflows/Tutorials/processjson-walkthrough/add-helper-flow.htm)
 
 ### SCR-6 Save all data that passes through the flow
-- **New flow:** in the **Save flow** dialog, turn on **Save all data that passes through the flow**.
+- **New flow:** in the **Save flow** dialog, turn on **Save all data that passes through the flow**. The tutorial calls it **Save All Data** in the same dialog where you name the flow.
 - **Existing flow:** open the flow options with the **Flow Activation** button on the navigation bar and toggle the same option. The button then reads **Saving data** (or **Not saving data**). The ITP page offers the same choice when you toggle the flow on.
+- The sheets set it in the first Save dialog, then check the Flow Activation button. If it reads Not saving data, they turn it on there.
 - **Behavior relied on:**
   - Without it, Execution History keeps only metadata such as status and times. With it, you can open an execution and see every card's input and output values.
   - Saved data is kept 30 days.
@@ -177,11 +182,14 @@ Every card, event, connector action, connection type, console screen, and platfo
 
 ### SCR-12 Okta Workflows OAuth app credentials
 - **Where:** Admin Console > **Applications and Resources** > **Applications** > **Okta Workflows OAuth** > **Sign On** tab. Copy **Client ID** and **Client secret** from there.
+- **Scopes:** **Applications and Resources** > **Okta Workflows OAuth** > **Okta API Scopes** lists the available scopes, each with a **Grant** or **Revoke** button.
+  - A granted scope offers Revoke, and one that isn't granted offers Grant.
+  - Clicking either changes this existing app, so the sheets only look.
 - **Behavior relied on:**
   - The account that creates an Okta or Okta ITP connection must be assigned to this app and have super admin credentials.
   - The scopes the cards need must be granted in this app. A card without a granted scope fails with an Insufficient Scope error.
   - Reauthorize the connection after a scope change.
-- **Sources:** [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm), [Okta ITP authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/overviews/authorization.htm)
+- **Sources:** [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm), [Okta ITP authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/overviews/authorization.htm), [Guidance for Okta connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/guidanceforoktaconnector.htm)
 
 ### SCR-13 Fields, types, mapping, custom fields
 - **Types:**
@@ -283,7 +291,7 @@ Every card, event, connector action, connection type, console screen, and platfo
 - **Behavior relied on:**
   - The card is the Workflows equivalent of a full Universal Logout.
   - KB-3 says to map the user ID into the card's User ID field.
-- ⚠ UNVERIFIED: how the card presents the opaque/iss_sub choice. If ISS and SUB fields appear, leave them empty.
+- ⚠ UNVERIFIED: how the card presents the opaque/iss_sub choice. The input table has Format and Protocol columns and marks ID, ISS, and SUB all required, which suggests the card asks for a format first. The sheets say: choose the ID (opaque) format, and stop if ISS or SUB still show as required.
 - ⚠ UNVERIFIED: whether a non-2xx response makes the card error. The sheets wrap it in If Error either way.
 - **Sources:** [Global Token Revocation](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/globaltokenrevocation.htm), [Okta ITP connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/oktaitp.htm), [KB-3](https://support.okta.com/help/s/article/how-to-perform-universal-logout-using-workflows)
 
@@ -408,8 +416,16 @@ Categories and card names were checked against the [function reference](https://
   - The flow continues after an error is handled.
   - Return and Continue If inside Try or If Error continue after the container [LIM-5].
   - Okta recommends no more than three nested If Error blocks; the sheets nest none.
-- ⚠ UNVERIFIED (U6): whether `code` holds the HTTP status when Raw Request fails, and what it holds when a request fails without a status. Settled for 422 by P6-T4 scenario S2; see the report for the no-status case.
-- **Sources:** [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [KB-2](https://support.okta.com/help/s/article/How-to-setup-an-error-notification-flow-in-Okta-Workflows) (uses the error object's `message` and `execution` fields)
+- **Other sources disagree on what the error object holds:**
+  - KB-2's screenshot of an If Error section shows the **Error** object listing `message`, `method`, `flo`, and `execution`, with no `code`, followed by an **Enter key name here** field.
+  - KB-6 quotes an Okta-card error as `{"error":{"status":500,"message":{"statusCode":400,…}}}`, which is a 500 that wraps the API's 400.
+  - The Helper flows page says card error objects often carry `statusCode`.
+- ⚠ UNVERIFIED (U6): whether `code` is present for a Raw Request HTTP error, and whether it's the HTTP status or a wrapping 500. Also unverified: what it holds when a request fails without a status. P6-T4 scenario S2 settles it for 422, and catches both wrong cases:
+  - If `code` is 500, SAML gets three needless retries, so the mock records four calls instead of one.
+  - If `code` is missing and Object – Get errors, the SAML execution fails before writing its Results row, and For Each skips any rows after it.
+  
+  See the report for the no-status case.
+- **Sources:** [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [KB-2](https://support.okta.com/help/s/article/How-to-setup-an-error-notification-flow-in-Okta-Workflows) (text and screenshot), [KB-6](https://support.okta.com/help/s/article/Okta-Workflows-connection-fails-with-The-refresh-token-is-invalid-or-expired-error-and-requires-reauthorization), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm)
 
 ### FN-11 Object – Get
 - **Inputs:** **object** (Object, required) and **path** (Text, required).

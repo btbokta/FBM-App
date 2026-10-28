@@ -32,6 +32,7 @@ Click paths and card-by-card builds for HUMAN tasks. The executor shows the shee
 - **Mappings:**
   - **← C4.output** means drag card C4's output field named `output` into the field. `>` separates groups on a card, as in **← C1.User Context > Okta User ID**.
   - Fields keep the card's default labels (`output`, `Result`, `total`, `date`); the sheets don't rename them. Fields you create, such as helper inputs or Assign and Construct inputs, get the exact names the sheet gives.
+  - You create a field in the empty slot at the bottom of a card's fields. Okta labels it **Click or drag to create** for outputs, and **Click or drop to create** or **Click or drop here to create** for inputs, depending on the card.
 - **Values:**
   - Typed values are in `code`.
   - `<NAME>` is a value from `.env` or a Terraform output, filled in by the executor.

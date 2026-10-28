@@ -15,7 +15,7 @@ Each item is a claim the old sheets made that a fetched page contradicts, or tha
 | # | Old sheet | What was wrong | Evidence | Resolution |
 | --- | --- | --- | --- | --- |
 | E1 | wf-01 C7.4, C7.8; PLAN U6 and P6-T4 | Read the HTTP status from the If Error object at `statusCode`. The documented If Error object has `message`, `code`, `method`, `flo`, and `execution`. `statusCode` appears only on the helper-flow Error object used by card-level error handling. If Raw Request errors on non-2xx, which is the U6 default, every non-2xx status would read as empty. A 404 would become a failure, 429 and 5xx would never retry, and T7 would fail | [If Error](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/error-handling/errorhandling_trycatch.htm), [Helper flows](https://help.okta.com/wf/en-us/content/topics/workflows/learn/about-helper-flows.htm) | wf-01 C8.6.2 and C8.10.2 use path `code`. The U6 default now says `code`; U6 stays unverified and is settled by S2 |
-| E2 | wf-00 §3 | Created every connection on the org-level Connections page and never added it to the folder. Org-level connections can't be used until they're added to a folder | [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm) | wf-00 creates all connections from the folder's Connections tab |
+| E2 | wf-00 §3 | Created every connection on the org-level Connections page and never added it to the folder. Org-level connections can't be used until they're added to a folder | [Configure a connection](https://help.okta.com/wf/en-us/content/topics/workflows/build/configure-connection.htm) | wf-00 creates each connection on the Connections page with **Folder Access** set to `POC-ITP-FBM`. Review round 1 changed the route: one help page says a folder has only Flows and Tables tabs (SCR-4) |
 | E3 | wf-01 (whole flow) and wf-03 Part A | Neither had a connection-account Continue If. CLAUDE.md requires one in every flow | CLAUDE.md, Safety rules | wf-01 C2 and wf-03 C4 added, each before any card that acts on a user |
 | E4 | wf-00 `POC-Okta` step 1 | Took the client credentials from Okta Workflows OAuth > General > Client Credentials. The docs put them on the **Sign On** tab, and the menu is now **Applications and Resources** > Applications | [Okta connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/authorization.htm) | wf-00 corrected |
 | E5 | wf-01 C7.3, C7.5 | Built JSON bodies with Text – Compose and hand-typed quotes. Compose documents no escaping, so a `"` or `\` in a value breaks the body. The Raw Request page recommends Object cards plus JSON – Stringify | [Compose](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/text/text_compose.htm), [Raw Request](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_raw.htm), [Construct](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/object/object_construct.htm) | wf-01 C8.3–C8.5 and C8.7–C8.8 use Construct and Stringify |
@@ -245,7 +245,24 @@ Part A cards C1–C4 run on every run. **Probe** is the `POC-Respond Probe` row 
 
 ## 5. Independent review rounds
 
-To be completed in the next revision of this report.
+Each round used a new general-purpose subagent. It got only README.md, the ledger, the six sheets, and the fixed names from PLAN.md: no reasoning from this session and no list of suspected mistakes. Each was told to fetch the docs itself and try to prove the sheets wrong.
+
+### Round 1: 0 confirmed errors, 8 suspected
+
+The reviewer read about 40 pages, including KB screenshots, and found no fetched page that contradicts any card name, label, type, option, mapping, or console path. Seven of its eight suspected findings were real gaps and are fixed. Finding 3 is partly fixed: the default path stays `code`, and S2 now checks it. The fixes come first in the commit "wf sheets: apply review round 1".
+
+| # | Finding | Resolution |
+| --- | --- | --- |
+| R1-1 | wf-03 C8.1 and wf-04 C5.1: Global Token Revocation's input table has Format and Protocol columns and marks ID, ISS, and SUB all required, so the card may ask for a format first. The sheets had dropped the ledger's ⚠ | Fixed. Both cards carry ⚠ UNVERIFIED: choose the ID (opaque) format, and stop if ISS or SUB still show as required. ACT-1 updated |
+| R1-2 | First save: the docs offer naming in the Save dialog only while the flow has no name, and Okta's tutorial turns on Save All Data in that same dialog. Renaming with the pencil first might skip the dialog | Fixed in every sheet. The flow isn't renamed with the pencil; the first Save dialog names it and turns on Save all data; then the builder checks the Flow Activation button for **Saving data** and turns it on there if needed. I fetched the tutorial ([Build a user creation flow](https://help.okta.com/wf/en-us/content/topics/workflows/tutorials/timebasedactions-walkthrough/build-user-creation-flow.htm)); SCR-5 and SCR-6 updated |
+| R1-3 | The If Error `code` may be missing: KB-2's screenshot shows the Error object without it. Or it may be a wrapping 500: KB-6 shows an Okta-card error with status 500 around statusCode 400. Either would misclassify silently or halt Per App | Partly accepted. `code` stays the default because the If Error page, the authoritative source, lists it. I checked the KB-2 screenshot myself. FN-10 now records the conflicting evidence, wf-01 C4 carries FN-11's missing-path ⚠, and the U6 note and S2 questions now tell the three cases apart (one call and one row; four calls; failed execution). S2 catches each, so the task that tests U6 catches a wrong guess |
+| R1-4 | Nothing checked that the Okta Workflows OAuth app grants `okta.users.read` and `okta.schemas.read`. Without them the Okta cards fail with Insufficient Scope | Fixed. wf-00 "Before you start" now reads the app's **Okta API Scopes** tab without changing it, and stops if a needed scope is missing (approval rule). I fetched the tab's path from [Guidance for Okta connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/overviews/guidanceforoktaconnector.htm); SCR-12 updated |
+| R1-5 | wf-01 C15.4 said the flow "is listed because you saved after C1" as fact; the ledger marks it ⚠ | Fixed. ⚠, plus save again and stop if it's still missing |
+| R1-6 | wf-03 said the flow "must be on before ITP can list it"; no page says so | Fixed. Reworded to the documented steps; whether ITP lists flows that are off is U2 |
+| R1-7 | wf-02 per-client said it "needs a sixth active flow", but with 4 flows on it would be the fifth, which Starter allows | Fixed in the sheet: it's the fifth and takes the slot the fallback needs, so P10-T3 still blocks it. PLAN P10-T3's wording is PC6 |
+| R1-8 | The label for custom inputs varies between "Click or drop to create" and "Click or drop here to create" in Okta screenshots | README now names both labels |
+
+The reviewer also noted that the "Flows and tables" page lists only Flows and Tables tabs for a folder, while Configure a connection documents a folder Connections tab. I fetched it and confirmed. wf-00 now uses the org-level Connections page with Folder Access, which three pages document, and keeps the folder tab as an alternative. The reviewer also confirmed the numeric Caller `id` in KB-1's screenshot, which is added to PC1.
 
 ## 6. Final pass
 
@@ -265,7 +282,7 @@ To be completed in the next revision of this report.
 | V8 | Whether Delegated Flow's Caller sub-fields can be dragged one by one | wf-03 C3 | P6-T5 (the builder stops if not) |
 | V9 | How Global Token Revocation presents the opaque/iss_sub choice, and whether it errors on non-2xx | wf-03 C8, wf-04 C5 | P6-T5 and P7-T4 builds, P8-T1 (status recorded) |
 | V10 | Whether a helper must be ON to be called, and whether a flow must be saved before it can select itself | wf-01, wf-02 | No task needed: the sheets turn helpers on first and save before C15.4 |
-| V11 | The label `Custom Header` vs `Custom`, and whether an API Connector icon appears in the folder's New Connection selector | wf-00 | P6-T1 (builder reports; the sheet gives a fallback) |
+| V11 | The label `Custom Header` vs `Custom`; whether an API Connector icon appears in the New Connection selector; and whether a folder has its own Connections tab (two help pages disagree) | wf-00 | P6-T1. The builder reports, and the sheet gives a fallback for each |
 | V12 | The Error object's `code` when a request fails with no HTTP status | wf-01 C8.6.2, C8.10.2 | **No task.** See PC3 |
 | V13 | Object – Get on a missing path | wf-01 C4 | **No task.** POC users all have email; listed for production |
 | V14 | Whether a blank delegated-flow input counts as empty | wf-03 C6, wf-04 C2 | P8-T4 T4c |
@@ -283,6 +300,7 @@ None of these is applied. Each is the smallest change that fixes the problem.
   - The problem: Okta's KB shows Workflows flow URLs as `…/app/flows/<26-character ID>` [KB-2], but the entity risk rule's `workflow.id` is an integer (F4). P6-T5's check that `WF_RESPOND_FLOW_ID` is a positive integer would then fail, and Terraform couldn't set the rule's workflow.
   - The change: P6-T5 records the URL ID as is in `wf.flowIdSource`. If it isn't all digits, P7-T1 takes the ac-05 contingency directly: create the rule in the UI by picking the flow, read `actions.entityRisk.actions[0].workflow.id` by API, set `WF_RESPOND_FLOW_ID` from that, then `terraform import`.
   - P7-T5's ORNs would need the same check. The SOC resource set may have to be built in the UI and imported (U4).
+  - A possible second source: KB-1's 2022 screenshot shows a helper flow's context **Caller** `id` as a number (`374650`). Once Respond calls the dispatcher, the dispatcher's C1 Caller `id` may be Respond's numeric ID. That's unverified, and it arrives only after Part B, which is too late for P7-T1.
 - **PC2: P6-T1 acceptance.**
   - The problem: "All showing as connected" can't be observed for API Connector connections, which Workflows doesn't test until they're used [CON-3].
   - The change: "`POC-Okta` and `POC-Okta ITP` show healthy; the three API Connector connections are listed in the folder." P6-T4 then tests them.
@@ -298,6 +316,9 @@ None of these is applied. Each is the smallest change that fixes the problem.
 - **PC5: For Each stops on a helper error.**
   - The problem: For Each stops processing more items when one helper execution errors [FN-19]. A runtime error in one app's Per App, as in PA-6 or PA-10, would skip the remaining apps. The design intends every enabled app to be called.
   - The change: use **List – For Each - Ignore Errors** in Dispatcher C8. It has the same inputs and keeps processing the other items.
+- **PC6: P10-T3 wording.**
+  - The problem: P10-T3 says the per-client variant "needs a sixth active flow". With 4 flows on, the sweep helper would be the fifth, which Starter allows [LIM-1]. It's blocked because it would take the slot the fallback (P10-T5) needs.
+  - The change: reword it to "uses the last Starter slot, which the fallback needs". The block condition stays the same.
 
 ## 9. Active-flow count
 

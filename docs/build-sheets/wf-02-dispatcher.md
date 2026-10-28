@@ -23,9 +23,15 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
 
 ### Build
 
-1. Open folder `POC-ITP-FBM` and click **+ New Flow**. Click the pencil icon beside `Unnamed` and type `POC-FBM Logout – Dispatcher` [SCR-5].
-2. Build C1–C8 below. On the first **Save**, turn on **Save all data that passes through the flow** in the Save flow dialog.
-3. Save, work through the checklist, then switch **Flow is OFF** to ON [SCR-7]. Wait one minute before the first test run.
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5]. Don't rename it with the pencil icon; the first Save names it.
+2. Build C1. Click **Save** [SCR-5, SCR-6]. In the **Save flow** dialog:
+   - Type the name `POC-FBM Logout – Dispatcher`.
+   - Turn on **Save all data that passes through the flow** (**Save All Data**).
+   - Click **Save**.
+
+   Then check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
+3. Build C2–C8 below.
+4. Save, work through the checklist, then switch **Flow is OFF** to ON [SCR-7]. Wait one minute before the first test run.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
 
@@ -159,11 +165,11 @@ For each scenario the executor runs `npm run check -- dispatcher-prep --user 02 
 - Open `POC-FBM Logout – Per App` > Execution History. Report how many executions this run started; 3 are expected, one per enabled row.
 
 **S2 (SAML returns 422):**
-- In `POC-FBM Logout – Per App` > Execution History, open the execution whose C7 output is `POC-FBM-SAML`.
-- In C8.6, report which section ran (Try or If Error).
-  - If **If Error** ran, expand its **Error** object and paste it into chat (U6).
+- In `POC-FBM Logout – Per App` > Execution History, find every execution whose C7 output is `POC-FBM-SAML`. One is expected; four means the flow retried.
+- In the first one, report which section of C8.6 ran (Try or If Error), and whether the execution ended in an error.
+  - If **If Error** ran, expand its **Error** object and paste it into chat, including every key and value (U6). Also report what C8.6.2 output.
   - If **Try** ran, report C8.6.1's Status Code.
-- Report the Status code and Outcome of that execution's Results row; `422` and `failure` are expected.
+- Report every Results row for `POC-FBM-SAML`. One row, `422` `failure`, is expected.
 
 **S3 (OIDC returns 429 first):**
 - Report the two Results rows for `POC-FBM-OIDC` in table `POC-FBM Logout Results`: `429` `retry`, then `204` `success`, are expected.
@@ -213,11 +219,11 @@ This call needs scope `okta.users.manage` granted in the Okta Workflows OAuth ap
 
 Checklist: B1–B6 come after C8, the flow is saved, and it's still ON.
 
-### Variant `per-client` (needs a sixth active flow)
+### Variant `per-client` (adds an active flow)
 
-P10-T3 blocks this variant on Workflows Starter when 4 or more flows are on [LIM-1].
+With Per App, Dispatcher, Respond, and Respond by Email on, this helper would be the fifth active flow. That's the Starter limit [LIM-1], and it's the slot the fallback (wf-05) needs if it's built later. So P10-T3 blocks this variant on Workflows Starter when 4 or more flows are on.
 
-1. Create helper `POC-FBM Token Sweep – Per Client` in folder `POC-ITP-FBM`, with **Save all data** on:
+1. Create helper `POC-FBM Token Sweep – Per Client` in folder `POC-ITP-FBM`. Name it and turn on **Save all data that passes through the flow** in the first Save dialog, as in Part A.
    - **H1 Helper Flow**: inputs `User ID` (Text) and `Client` (Object).
    - **H2 Branching – Continue If**: **value a** ← H1.User ID; `not equal to`; **value b** `<OKTA_WF_CONNECTION_USER_ID>`; message `Refusing to act on the Workflows connection account`.
    - **H3 Object – Get**: **object** ← H1.Client; **path** `client_id`; output Text [API-4].

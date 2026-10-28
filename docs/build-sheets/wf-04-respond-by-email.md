@@ -14,9 +14,14 @@ This flow is the guide's `ITP FBM – Respond by Email` (guide Step 6, the optio
 
 ## Build
 
-1. Open folder `POC-ITP-FBM` and click **+ New Flow**. Click the pencil icon beside `Unnamed` and type `POC-ITP FBM – Respond by Email` [SCR-5].
+1. Open folder `POC-ITP-FBM` and click **+ New Flow** [SCR-5]. Don't rename it with the pencil icon; the first Save names it.
 2. Build C1–C9, all at the top level.
-3. Click **Save**, turning on **Save all data that passes through the flow** in the Save flow dialog.
+3. Click **Save** [SCR-5, SCR-6]. In the **Save flow** dialog:
+   - Type the name `POC-ITP FBM – Respond by Email`.
+   - Turn on **Save all data that passes through the flow** (**Save All Data**).
+   - Click **Save**.
+
+   Check that the **Flow Activation** button reads **Saving data**. If it reads Not saving data, open it and turn the option on.
 4. Work through the checklist, then switch **Flow is OFF** to ON [SCR-7].
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
@@ -51,7 +56,8 @@ POC users' login equals their email (U27, settled by P8-T4 T4b). An email that m
 - **Try** section:
   - **C5.1 Okta ITP – Global Token Revocation** [ACT-1]
     - **Connection**: `POC-Okta ITP`
-    - **User > ID** ← C3.System Properties > ID. If ISS and SUB fields are shown, leave them empty.
+    - **User > ID** ← C3.System Properties > ID. This is the `opaque` format.
+    - ⚠ UNVERIFIED: how the card asks for the format [ACT-1]. If it offers a format or protocol choice, choose the one with the ID field (`opaque`). If ISS or SUB still show as required, stop and tell the executor.
 - **If Error** section:
   - **C5.2 Flow Control – Assign** [FN-3]: create `gtr error status`, type Number, value `0`.
 - **View Outputs** on C5: add `gtr status`, type Number.
