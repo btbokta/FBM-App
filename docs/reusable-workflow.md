@@ -149,6 +149,24 @@ There are two ways to get the flows:
 8. Optional: drop the `POC-` prefix from flow and table names, as the guide names them. Then open each Call Flow, For Each, and Tables card and check that it still points at the right flow or table.
 9. Turn the flows on in this order: Per App, and the sweep helper if the POC built it; then Dispatcher; then Respond; then Respond by Email and the fallback if you keep them.
 
+### Values that change between environments
+
+Anything below breaks, or silently points at the wrong place, if you copy the flows to another org without changing it. An imported folder keeps these values as typed.
+
+| Value | Where it appears | What to use |
+| --- | --- | --- |
+| Org domain | `POC-Okta` and `POC-Okta ITP` connections (wf-00 §3), written as `<org subdomain>.oktapreview.com` | Your org's domain. A production org isn't on `oktapreview.com` |
+| Okta Workflows OAuth app client ID and secret | The same two connections | The values from that org's own Okta Workflows OAuth app |
+| Connection-account user ID | Per App C2; Dispatcher C2 (and H2); Respond C4 and C7; Respond by Email C4; fallback C4 | That org's connection account. A wrong ID doesn't error: the flow stops refusing the real account |
+| Authorization server issuer | Dispatcher C7.2 URL | The **custom** authorization server's issuer, including its server ID. Not the org server |
+| Logout scope | Dispatcher C7.2 body | The scope defined on that custom server |
+| Dispatcher client ID and secret | The `POC-AS Token (Basic)` connection | The service app in that org. The secret never goes in a card |
+| Authorization server audience, scope, and issuer | Each app's token validation | Every GTR app must accept the same audience and scope the dispatcher's token carries |
+| Risk group ID | Fallback C10 (and the name in C11's message) | The group your entity risk rule targets |
+| Registry rows | `POC-FBM Logout Registry` table | One row per real app: its endpoint, instance ID, and identifier attribute. Import drops table data |
+| `GTR_AUTH_MODE` | Dispatcher C7 and C8, Per App C8.1, C8.2, C8.6.1 | `oauth` or `static`, decided per environment by whether client credentials is available there |
+| Flow and table names | Call Flow, For Each, and Tables cards | Renaming a flow or table means re-pointing every card that references it |
+
 ### 3. ITP and the SOC
 
 Follow guide Steps 5 and 6. Target the entity risk rule and session protection at your own groups, and exclude the connection account from both.

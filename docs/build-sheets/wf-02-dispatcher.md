@@ -91,11 +91,11 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, create one
 
   - **C7.2 API Connector – Raw Request** [FN-24]
     - **Connection**: `POC-AS Token (Basic)`. Click the connection name to pick it [SCR-4]. It sends the dispatcher client's ID and secret as `Authorization: Basic …` [CON-3].
-    - **URL**: `<auth_server_issuer>/v1/token`
+    - **URL**: `<auth_server_issuer>/v1/token`. **Environment-specific.** `<auth_server_issuer>` is the issuer of the **custom** authorization server `POC-FBM-AS` (Terraform output `auth_server_issuer`), for example `https://<org>.oktapreview.com/oauth2/<authServerId>`. It is not the org authorization server (`https://<org>.oktapreview.com`): the design needs a custom scope and a policy rule for the dispatcher client (F21), and those are defined on the custom server (P3-T4). A new environment has a new server ID, so this URL changes.
     - **Method**: `POST`
     - **Headers** ← C7.1.output
     - **Query**: leave empty
-    - **Body**: `grant_type=client_credentials&scope=poc.fbm.logout`
+    - **Body**: `grant_type=client_credentials&scope=poc.fbm.logout`. **Environment-specific.** The scope must match the scope defined on that custom server, and every app's token check must require the same scope and audience.
   - **C7.3 JSON – Parse** [FN-17]
     - **string** ← C7.2.Body
     - **output**: set the type to Object.
