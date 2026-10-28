@@ -14,6 +14,8 @@ After the card runs, the flow calls each FBM app's own logout method from a regi
 
 **Out of scope.** There's no containment group. After logout, re-entry is governed by the normal sign-in policies; see Limitations and residual risk.
 
+**Reusing the POC build.** The POC builds this design in a preview org, plus parts that exist only for testing. [Reusable workflow and redeploy checklist](reusable-workflow.md) lists what carries over, and how to redeploy for in-house apps that expose a Global Token Revocation endpoint. That deployment needs no third-party app.
+
 **Alternatives considered.**
 
 - *Shadow app event emitter:* ruled out. It needs one app user per person, the same assignment cost FBM avoids.
@@ -31,7 +33,7 @@ Confirm these before you build; a missed connection-account exclusion is the one
 
 - **Admin roles.** For the entity risk rule, a super admin or a custom role with Manage policy and the entity risk policy resource set. For session protection, a super admin or org admin.
 - **Workflows plan.** Room for 3 active flows, or 4 with the optional email wrapper. Workflows Starter allows 5 ([Workflows system limits](https://help.okta.com/wf/en-us/Content/Topics/workflows/workflows-system-limits.htm)).
-- **Connections.** The Okta ITP connector for the Global Token Revocation card, the Okta connector for Read User, and a vendor connector with least-privilege admin credentials for each SaaS app in the registry.
+- **Connections.** The Okta ITP connector for the Global Token Revocation card and the Okta connector for Read User. Only if the registry has SaaS apps, also a vendor connector with least-privilege admin credentials for each of them; a registry of in-house `gtr` apps needs none.
 - **Connection account exclusion.** Exclude the account that authorizes the Workflows Okta connections from every ITP rule. Clearing its sessions and tokens breaks the connection ([Okta KB](https://support.okta.com/help/s/article/Okta-Workflows-connection-fails-with-The-refresh-token-is-invalid-or-expired-error-and-requires-reauthorization)).
 - **App inventory.** Sort the FBM apps into three groups: in-house apps that can expose a Global Token Revocation endpoint, SaaS apps with a session-revocation API, and apps with neither.
 - **Phishing-resistant authenticators.** FastPass or FIDO2 available for the policies that guard FBM apps; without containment, this is the main control against re-entry.
@@ -47,7 +49,7 @@ One Workflows table lists every FBM app that has a logout method; the dispatcher
 | --- | --- | --- | --- |
 | App name | Text | Payroll Portal | Display and logging |
 | App instance ID | Text | `0oa1example` | The FBM app's ID in Okta |
-| Method | Text | `gtr` | `gtr` for in-house endpoints, `vendor` for SaaS APIs |
+| Method | Text | `gtr` | `gtr` for in-house endpoints; `vendor` for SaaS APIs, only if Step 2 has the optional vendor branch |
 | Endpoint or API | Text | `https://payroll.example.com/global-token-revocation` | Where the per-app helper sends the call |
 | Identifier attribute | Text | `email` | The Okta profile attribute the app keys users by |
 | Enabled | True/False | `true` | Turns a row off without deleting it |
@@ -67,7 +69,7 @@ A Workflows table holds up to 500,000 rows ([Workflows system limits](https://he
    1. Headers: `Authorization: Bearer <access token>` and `Content-Type: application/json`.
    2. Body: `{"sub_id":{"format":"email","email":"<profile email>"}}`.
    3. Only Okta can sign its native ULO token, so these endpoints also accept a client-credentials access token with a dedicated logout scope. Otherwise they follow Okta's Global Token Revocation contract ([Build Universal Logout for your app](https://developer.okta.com/docs/guides/oin-universal-logout-overview/)).
-4. For `vendor` (SaaS apps), use the vendor connector's Custom API Action to call its session-revocation API with the identifier value (see Appendix).
+4. Optional, only if the registry has SaaS apps: for `vendor`, use the vendor connector's Custom API Action to call its session-revocation API with the identifier value (see Appendix). Without this branch, a row with any Method other than `gtr` gets no call and is recorded as a failure.
 5. Classify the status code:
    - 204, any other 2xx, or 404 (user not found): success.
    - 429 or 5xx: wait, then retry up to three times. Connector cards have built-in backoff and retry; raw HTTP calls need this logic ([Workflows system limits](https://help.okta.com/wf/en-us/Content/Topics/workflows/workflows-system-limits.htm)).

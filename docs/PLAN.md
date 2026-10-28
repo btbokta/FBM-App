@@ -6,7 +6,7 @@ Planned 2026-10-27. Source of truth for the design: [docs/itp-fbm-option-a-guide
 
 The POC proves, in a dedicated Okta preview org, that one delegated flow, `POC-ITP FBM – Respond`, can do what Universal Logout can't do for Federation Broker Mode (FBM) apps. The flow is triggered by ITP's entity risk rule, by session protection, or by a SOC admin. It runs the Okta ITP connector's Global Token Revocation card, then `POC-FBM Logout – Dispatcher`, which calls each enabled app in `POC-FBM Logout Registry`.
 
-A mock in-house app on Vercel stands in for the FBM apps. It signs users in through the FBM OIDC test app, exposes a Global Token Revocation endpoint per app and a vendor-style revoke endpoint, and records every call so a local TypeScript harness can time and check each test. Okta objects are Terraform; Workflows flows are hand-built from card-by-card build sheets because Okta has no supported import API (F40).
+A mock in-house app on Vercel stands in for the FBM apps. It signs users in through the FBM OIDC test app, exposes a Global Token Revocation endpoint per app and a vendor-style revoke endpoint, and records every call so a local TypeScript harness can time and check each test. Okta objects are Terraform; Workflows flows are hand-built from card-by-card build sheets because Okta has no supported import API (F40). Not everything the POC builds carries over: [reusable-workflow.md](reusable-workflow.md) separates the reusable workflow from the test scaffolding and has the redeploy checklist.
 
 ### Inputs as resolved
 
@@ -17,7 +17,7 @@ A mock in-house app on Vercel stands in for the FBM apps. It signs users in thro
 | Okta credentials | A Super Administrator's SSWS API token for Terraform and setup scripts (plan change 2026-10-27: throwaway org, so no provisioner service app); OAuth 2.0 service app `POC-Harness` with private key JWT for tests (Terraform-created) |
 | Language | TypeScript. Runtime is **Node 24, not Node 20**: Vercel stopped deploying Node 20 functions on 2026-10-01 (F60). Local scripts use Node 24 too, so one runtime covers everything |
 | Mock app host | Vercel, project default domain `https://<project>.vercel.app` |
-| Real SaaS test tenant | None. The vendor branch is exercised against the mock's API-key endpoint |
+| Real SaaS test tenant | None. The vendor branch is exercised against the mock's API-key endpoint, and it's optional in a deployment ([reusable-workflow.md](reusable-workflow.md)) |
 | Burst test users | 25 |
 
 ### Success criteria
@@ -94,13 +94,13 @@ Every fact below was checked against the cited page on 2026-10-27. Tasks refer t
 | --- | --- | --- |
 | F39 | Active flows: Starter 5, Light 50, Medium 150, Maximum unlimited. Okta connector: 30 concurrent requests, 6,000 per minute. Tables: 500,000 rows. Execution history kept 30 days | [Workflows system limits](https://help.okta.com/wf/en-us/Content/Topics/workflows/workflows-system-limits.htm) |
 | F40 | Export and import is by `.flow` or `.folder` file in the console, which drops connections and table data; Okta has no public API to manage flows | [Export and import](https://help.okta.com/wf/en-us/content/topics/workflows/build/export-import-flows.htm), [Okta dev forum, 2025-11-19](https://devforum.okta.com/t/getting-workflow-configuration-through-management-api/34598) |
-| F41 | Okta ITP connector cards: Global Token Revocation (input User ID, format opaque; output Status Code; 204 revoked, 403 missing permissions), Upsert User Risk (User ID, Risk Level Low/High), Retrieve User Risk, User Risk Detected event (Risk Level, Previous Level, Okta User {ID…}) | [Okta ITP connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/oktaitp.htm), [Global Token Revocation](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/globaltokenrevocation.htm), [Upsert User Risk](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/upsertuserrisk.htm), [User Risk Detected](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/events/userriskdetected.htm) |
+| F41 | Okta ITP connector cards: Global Token Revocation (input User > ID, format opaque; output Response > Status Code; 204 revoked, 403 missing permissions), Upsert User Risk (User > ID, Risk Level Low/High), Retrieve User Risk, User Risk Detected event (Risk > Level `LOW`/`MEDIUM`/`HIGH`, Risk > Previous Level, Okta User > ID…) | [Okta ITP connector](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/oktaitp.htm), [Global Token Revocation](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/globaltokenrevocation.htm), [Upsert User Risk](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/actions/upsertuserrisk.htm), [User Risk Detected](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/oktaitp/events/userriskdetected.htm) |
 | F42 | Delegated Flow event card: extensible Inputs (Text, Number, True or False, Date & Time), User Context > Okta User ID (the admin who runs it), Context > Caller {ID, Alternate ID, Display Name, Type}; the Run button is unavailable while a flow is off | [Build a delegated flow](https://help.okta.com/wf/en-us/content/topics/workflows/build/build-delegated-flow.htm), [KB: configure delegated workflows](https://support.okta.com/help/s/article/how-to-configure-delegated-workflows) |
-| F43 | Running a delegated flow needs a custom admin role with Run delegated flow and a resource set that contains the flow; run from Admin Console > Workflows > Delegated flows > Run; System Log `workflows.user.delegatedflow.run` | [About delegated flows](https://help.okta.com/en-us/Content/Topics/automation-hooks/delegated-flows/about-delegated-flows.htm), [Run a delegated flow](https://help.okta.com/oie/en-us/content/Topics/automation-hooks/delegated-flows/run-delegated-flow.htm) |
+| F43 | Running a delegated flow needs a custom admin role with Run delegated flow and a resource set that contains the flow; run from Admin Console > Workflows > Delegated flows > Run. System Log `workflows.user.delegatedflow.run` is documented only for a delegated flow that Okta invokes in response to a session violation; no page says whether manual or entity-risk runs log it | [About delegated flows](https://help.okta.com/en-us/Content/Topics/automation-hooks/delegated-flows/about-delegated-flows.htm), [Run a delegated flow](https://help.okta.com/oie/en-us/content/Topics/automation-hooks/delegated-flows/run-delegated-flow.htm), [ITP System Log events](https://help.okta.com/oie/en-us/content/topics/itp/system-log-events.htm) |
 | F44 | ITP supports only delegated flows; create the flow and turn it on before adding the rule | [ITP delegated flows](https://help.okta.com/oie/en-us/content/topics/itp/workflows-itp-create-delegated-flows.htm) |
-| F45 | Function cards used: Call Flow (outputs created by hand with the helper's exact names and types), Return, For Each (`item`, static values, concurrency; no outputs), Object – Get (dot paths), Object – Construct, If/Else, If/ElseIf, Continue If, Lookup, Assign If, Assign, Wait For (seconds to days), Text – Compose, Text – Concatenate, Number – Add, Number – Multiply, Date & Time – Now, JSON – Parse, List – Pluck, List – Includes | [Function reference](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/functions.htm), [Call Flow](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_spawn.htm), [For Each](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/list/list_each.htm) |
-| F46 | Error Handling – If Error has Try and If Error sections and passes values out through View Outputs. Card-level retry happens only for HTTP 429; 400–422, 500, 503, and 504 aren't retried | [If Error](https://help.okta.com/wf/en-us/Content/Topics/Workflows/function-reference/Error-Handling/errorhandling_trycatch.htm), [Error handling](https://help.okta.com/wf/en-us/content/topics/workflows/build/set-error-handling.htm) |
-| F47 | A helper flow can call itself (recursion) | [KB: recursion in Workflows](https://support.okta.com/help/s/article/set-up-recursion-in-workflows) |
+| F45 | Function cards used: Call Flow (outputs created by hand with the helper's exact names and types), Return, For Each (`item`, static values, concurrency; no outputs; stops processing further items when a helper execution errors), Object – Get (dot paths), Object – Construct, If/Else (one condition per card; wf-01 C8 nests a second one), Continue If, Lookup, Assign If, Assign, Wait For (1 second to 30 days), Text – Concatenate, Number – Add, Number – Multiply, Date & Time – Now (`date`, ISO UTC), JSON – Parse, JSON – Stringify, List – Pluck, List – Includes, Tables – Search Rows, Tables – Create Row, API Connector – Raw Request. Every card, field, and label the wf sheets use is in [wf-card-reference.md](build-sheets/wf-card-reference.md) | [Function reference](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/functions.htm), [Call Flow](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_spawn.htm), [For Each](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/list/list_each.htm), [Wait For](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/flow-control/flocontrol_wait.htm), [If/Else](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/branching/branching_if.htm) |
+| F46 | Error Handling – If Error has Try and If Error sections and passes values out through View Outputs; its error object has `message`, `code`, `method`, `flo`, and `execution`. Card-level retry happens only for HTTP 429; 400–422, 500, 503, and 504 aren't retried | [If Error](https://help.okta.com/wf/en-us/Content/Topics/Workflows/function-reference/Error-Handling/errorhandling_trycatch.htm), [Error handling](https://help.okta.com/wf/en-us/content/topics/workflows/build/set-error-handling.htm) |
+| F47 | A helper flow can call itself (recursion), at most 250 times ("Stack limit exceeded") | [KB: recursion in Workflows](https://support.okta.com/help/s/article/set-up-recursion-in-workflows), [Workflows system limits](https://help.okta.com/wf/en-us/content/topics/workflows/workflows-system-limits.htm) |
 | F48 | API Connector – Raw Request: URL, Method, Headers (object), Query, Body (text) → Status Code, Headers, Body; API Connector connection auth types Basic, Custom Header, OAuth, Client Credentials, None, stored securely | [Raw Request](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_raw.htm), [API Connector authorization](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_authorization.htm) |
 | F49 | Tables: column types String, Number, Date, Boolean, Counter; Import reads CSV into defined columns; Export writes CSV; Search Rows (All matching rows, Where filter, max 3,500 rows); Create Row | [Create a table](https://help.okta.com/wf/en-us/Content/Topics/Workflows/build/create-table.htm), [Import from CSV](https://help.okta.com/wf/en-us/content/topics/workflows/build/import-from-csv.htm), [Search Rows](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/tables/stash_searchrows2.htm) |
 | F50 | Okta – Read User (input ID or Login); Okta – Custom API Action (Request Type, Relative URL starting with `/`, Query, Body → Status Code, Headers, Body) | [Read User](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/actions/readuser.htm), [Custom API Action](https://help.okta.com/wf/en-us/content/topics/workflows/connector-reference/okta/actions/httprequest.htm) |
@@ -130,7 +130,7 @@ Each item has a POC default and the task that settles it. The executor records t
 | U3 | The rule's `workflow_id` is the numeric flow ID in the Workflows console URL | P7-T1 | `itp.workflowIdMatchesUrl` |
 | U4 | The delegated-flow ORN uses the same flow ID | P7-T6 | `soc.ornWorks` |
 | U5 | The flow ID appears in the Workflows flow URL as `/flows/<number>` | P6-T5 | `wf.flowIdSource` |
-| U6 | A non-2xx response makes Raw Request error; inside If Error, the status code is at `statusCode` on the error object | P6-T4 scenario S2 | `wf.rawRequestErrorStatusPath` |
+| U6 | A non-2xx response makes Raw Request error; inside If Error, the status code is at `code` on the error object (the If Error page lists `message`, `code`, `method`, `flo`, `execution`) | P6-T4 scenario S2 | `wf.rawRequestErrorStatusPath` |
 | U7 | Search Rows (All matching rows) returns row objects keyed by column name (`Method`, `App name`, …) | P6-T4 scenario S1 | `wf.searchRowsRowShape` |
 | U8 | CSV import maps `true`/`false` into a Boolean column | P6-T1 | `wf.csvBooleanImport` |
 | U9 | The Okta ITP connection's default scopes let Global Token Revocation return 204, not 403 | P8-T1 | `t1.gtrStatus` |
@@ -1169,9 +1169,9 @@ Run record schema (P5-T2) used by every test: `{ test, runId, startedAt, finishe
      1. Run `npm run check -- dispatcher-prep --user 02 --scenario <S>`.
      2. Relay the printed user ID and wf-02 "Testing" steps to the human and wait.
      3. Run `npm run check -- dispatcher-verify --user 02 --scenario <S>`.
-  2. After S1, ask the human for the Search Rows row object shape (wf-02 Testing step 4) and record `wf.searchRowsRowShape` and `wf.tokenViaBasicConnection` (or `static`).
-  3. After S2, ask the human for the Results row status for SAML (expect 422) and for the If Error object (wf-01 card 7.4 note). Record `wf.rawRequestErrorStatusPath`.
-  4. If the path isn't `statusCode` or the row shape isn't flat, update wf-01 (cards 2, 4–6, 7.4, 7.8) to the recorded paths, commit as `P6-T4: correct wf-01 paths`, ask the human to apply the edit, and rerun the failing scenario.
+  2. After S1, ask the human for the Search Rows row object shape (wf-02 Testing, S1) and record `wf.searchRowsRowShape` and `wf.tokenViaBasicConnection` (or `static`).
+  3. After S2, ask the human for the Results row status for SAML (expect 422) and for the If Error object (wf-01 C8.6 note). Record `wf.rawRequestErrorStatusPath`.
+  4. If the path isn't `code` or the row shape isn't flat, update wf-01 (C3, C5–C7, C8.6.2, C8.7.4.2) to the recorded paths, commit as `P6-T4: correct wf-01 paths`, ask the human to apply the edit, and rerun the failing scenario.
 - **Acceptance check:** `dispatcher-verify` passes for S1, S2, and S3, and findings `wf.searchRowsRowShape`, `wf.rawRequestErrorStatusPath`, and `wf.tokenViaBasicConnection` are set.
 - **Rollback:** none.
 
@@ -1414,8 +1414,8 @@ Do each task only when its trigger holds; otherwise mark it `skipped` with the f
 - **Goal:** Make Respond set the user's risk to Low after revocation (guide Step 4.5).
 - **Inputs:** [wf-03](build-sheets/wf-03-respond.md) Part C.
 - **Steps:** The executor shows Part C and stops; the human adds the cards and reports.
-- **Acceptance check:** the human reports cards C1–C4 added and the flow saved.
-- **Rollback:** delete cards C1–C4.
+- **Acceptance check:** the human reports cards C13–C15 added and the flow saved.
+- **Rollback:** delete cards C13–C15.
 
 #### P10-T2 Re-run latency and T2 after the risk reset
 - **Owner:** VERIFY
@@ -1490,10 +1490,10 @@ Do each task only when its trigger holds; otherwise mark it `skipped` with the f
 #### P11-T1 Export Workflows tables
 - **Owner:** HUMAN
 - **Depends on:** P9-T5 (and any P10 tasks not skipped)
-- **Goal:** Get the Results and Probe tables into the repo for the report.
+- **Goal:** Get the Results and Probe tables into the repo for the report, and save the finished Workflows folder for a redeploy ([reusable-workflow.md](reusable-workflow.md)). Teardown deletes the folder, so this export is the only copy of the built flows.
 - **Inputs:** [ac-08 §1](build-sheets/ac-08-workflows-exports.md).
-- **Steps:** The executor shows ac-08 §1 and stops; the human saves the two CSVs.
-- **Acceptance check:** `reports/data/results-export.csv` and `reports/data/probe-export.csv` exist with the expected headers.
+- **Steps:** The executor shows ac-08 §1 and stops; the human saves the two CSVs and the folder export.
+- **Acceptance check:** `reports/data/results-export.csv` and `reports/data/probe-export.csv` exist with the expected headers, and `reports/data/POC-ITP-FBM.folder` exists.
 - **Rollback:** delete the files.
 
 #### P11-T2 Generate the report
@@ -1590,7 +1590,7 @@ One command removes everything code created; a short checklist covers the rest.
 3. `npm run teardown:verify` must print `NOTHING LEFT`.
 4. [ac-09](build-sheets/ac-09-teardown.md):
    1. Session protection UI back to the recorded settings.
-   2. Turn off and delete the Workflows folder `POC-ITP-FBM` (flows and tables).
+   2. Confirm P11-T1 saved `reports/data/POC-ITP-FBM.folder`, then turn off and delete the Workflows folder `POC-ITP-FBM` (flows and tables).
    3. Delete the POC connections.
    4. Revoke the Okta API token.
    5. Delete the Vercel token.
