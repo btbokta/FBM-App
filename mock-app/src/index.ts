@@ -1,3 +1,4 @@
+import type { Hono } from "hono";
 import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import { createApp, type AppDeps } from "./create-app.js";
 import { loadConfig } from "./config.js";
@@ -26,5 +27,6 @@ function realDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
   };
 }
 
-// Vercel's zero-config Hono support serves the default export (F61).
-export default createApp(realDeps());
+// Vercel's Hono builder serves the default export (F61), and only picks an entrypoint file that itself imports "hono".
+const app: Hono = createApp(realDeps());
+export default app;
