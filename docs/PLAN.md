@@ -112,7 +112,7 @@ Every fact below was checked against the cited page on 2026-10-27. Tasks refer t
 | ID | Fact | Source |
 | --- | --- | --- |
 | F60 | Node.js 20 was deprecated for builds and functions on 2026-10-01; available versions are 24.x (default) and 22.x; pin with `"engines": {"node": "24.x"}` | [Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions), [changelog](https://vercel.com/changelog/node-js-20-is-being-deprecated) |
-| F61 | Hono deploys with zero configuration from `src/index.ts` with `export default app` | [Hono on Vercel](https://vercel.com/docs/frameworks/backend/hono) |
+| F61 | Hono deploys with zero configuration from `src/index.ts` with `export default app`. **The builder takes the first file that imports `hono` from `app`, `index`, `server`, `src/app`, `src/index`, `src/server` (any of `.js .cjs .mjs .ts .cts .mts`), so `src/app.ts` outranks `src/index.ts`: don't name another Hono-importing file `app` or `server`.** Observed 2026-10-28: a `src/app.ts` without a default export gave a 500, "The default export must be a function or server" | [Hono on Vercel](https://vercel.com/docs/frameworks/backend/hono) |
 | F62 | Standard Protection (default) protects every deployment except production domains; the per-deployment URL that `vercel deploy` prints is protected. Check with `vercel project protection <name> --format json` | [Deployment Protection](https://vercel.com/docs/deployment-protection), [vercel project](https://vercel.com/docs/cli/project) |
 | F63 | Vercel KV is gone; use Upstash for Redis from the Marketplace: `vercel integration add upstash/upstash-kv`; client `@upstash/redis`, whose `Redis.fromEnv()` reads `UPSTASH_REDIS_REST_*` or `KV_REST_API_*`. Remove with `vercel integration resource remove <name> --disconnect-all --yes` | [Vercel Redis](https://vercel.com/docs/redis), [vercel integration](https://vercel.com/docs/cli/integration), [redis-js fromEnv](https://raw.githubusercontent.com/upstash/redis-js/main/packages/redis/platforms/nodejs.ts) |
 | F64 | CLI: `vercel link --yes --project <name>` (creates the project); `vercel env add NAME production --force` reads the value from stdin; `vercel deploy --prod --yes`; `vercel remove <project> --yes`; `VERCEL_TOKEN` env var | [link](https://vercel.com/docs/cli/link), [env](https://vercel.com/docs/cli/env), [deploy](https://vercel.com/docs/cli/deploy), [remove](https://vercel.com/docs/cli/remove), [global options](https://vercel.com/docs/cli/global-options) |
@@ -519,7 +519,7 @@ Mock app contract (applies to P2-T1 – P2-T4):
      - `poc:pkce:<state>` (with EX)
      `resetAll` deletes by `SCAN` over `poc:*`.
      `NullStore`: `ping()` reports `missing`, and every other method throws `StoreMissingError`, which routes map to 503.
-  6. `src/app.ts`: `createApp(deps: { config, store, now(): number, fetchFn, jwksFor(issuer) })` returns a Hono app with `GET /healthz`. `src/index.ts`: build real deps (`RedisStore` when `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` is set, else `NullStore`) and `export default createApp(deps)` (F61).
+  6. `src/create-app.ts`: `createApp(deps: { config, store, now(): number, fetchFn, jwksFor(issuer) })` returns a Hono app with `GET /healthz`. `src/index.ts`: build real deps (`RedisStore` when `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` is set, else `NullStore`) and `export default createApp(deps)` (F61).
   7. `test/store.test.ts`: one contract suite run against `MemoryStore` (sessions, revoke counts, calls filter, each fault mode, PKCE take-once, reset). `test/healthz.test.ts`.
 - **Acceptance check:** `npm --prefix mock-app ci && npm --prefix mock-app run typecheck && npm --prefix mock-app test` exits 0 with at least 10 tests.
 - **Rollback:** `git revert` the commit.
@@ -543,7 +543,7 @@ Mock app contract (applies to P2-T1 – P2-T4):
        - Other `iss` → 404.
      - Any other format, or a missing or non-object `sub_id` → 400.
      - A body that isn't JSON → 400.
-  4. Route in `src/app.ts`, in the contract's check order:
+  4. Route in `src/create-app.ts`, in the contract's check order:
      1. Run `takeFaultResponse(app, email)`; if it returns 429, add `Retry-After: 1`.
      2. Revoke with `revokeSessions(app, email)` and `deleteAppTokens(email)`.
      3. Record a `CallRecord` for every request and respond with an empty body.

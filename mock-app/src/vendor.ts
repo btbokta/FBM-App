@@ -1,5 +1,5 @@
 import type { Hono } from "hono";
-import type { AppDeps } from "./app.js";
+import type { AppDeps } from "./create-app.js";
 import { validateApiKey } from "./auth.js";
 import { recordCall } from "./gtr.js";
 import type { CallRecord } from "./store.js";

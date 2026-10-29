@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
 import { z } from "zod";
-import type { AppDeps } from "./app.js";
+import type { AppDeps } from "./create-app.js";
 import { validateApiKey } from "./auth.js";
 import type { OidcClient } from "./oidc.js";
 import { APP_KEYS, type AppKey } from "./store.js";

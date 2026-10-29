@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
-import { createApp, type AppDeps } from "./app.js";
+import { createApp, type AppDeps } from "./create-app.js";
 import { loadConfig } from "./config.js";
 import { RedisStore } from "./store-redis.js";
 import { createNullStore } from "./store.js";

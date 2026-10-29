@@ -1,5 +1,5 @@
 import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type JWK, type JWTPayload } from "jose";
-import { createApp, type AppDeps } from "../src/app.js";
+import { createApp, type AppDeps } from "../src/create-app.js";
 import { loadConfig } from "../src/config.js";
 import { MemoryStore } from "../src/store.js";
 

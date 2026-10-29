@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createApp, type AppDeps } from "../src/app.js";
+import { createApp, type AppDeps } from "../src/create-app.js";
 import { loadConfig } from "../src/config.js";
 import { MemoryStore, createNullStore, type Store } from "../src/store.js";
 

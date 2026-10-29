@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { createLocalJWKSet, errors, jwtVerify, type JSONWebKeySet } from "jose";
-import type { AppDeps } from "./app.js";
+import type { AppDeps } from "./create-app.js";
 import { isOidcConfigured } from "./config.js";
 import type { AuthServer } from "./store.js";
 

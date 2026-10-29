@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
-import type { AppDeps } from "./app.js";
+import type { AppDeps } from "./create-app.js";
 import { validateGtrBearer } from "./auth.js";
 import type { AppKey, CallRecord } from "./store.js";
 
