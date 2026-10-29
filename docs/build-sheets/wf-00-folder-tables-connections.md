@@ -2,9 +2,9 @@
 
 You'll create the folder `POC-ITP-FBM`, its three tables, and the five connections the flows use. Every console label comes from the ledger, [wf-card-reference.md](wf-card-reference.md); IDs in square brackets point to its entries.
 
-Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which one of `POC-AS Token (Basic)` or `POC-Mock GTR Static (Custom Header)` you create.
+Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It decides which one of `POC-GTR Client Credentials` or `POC-Mock GTR Static (Custom Header)` you create.
 
-**Reusable or test only:** the folder, the Registry's columns (not its four test rows), the Results table, and `POC-Okta`, `POC-Okta ITP`, `POC-API None`, and `POC-AS Token (Basic)` are reusable. `POC-Respond Probe` and `POC-Mock Vendor (Custom Header)` are test only. `POC-Mock GTR Static (Custom Header)` is conditional: static mode only (D-AUTH). See [reusable-workflow.md](../reusable-workflow.md).
+**Reusable or test only:** the folder, the Registry's columns (not its four test rows), the Results table, and `POC-Okta`, `POC-Okta ITP`, and `POC-GTR Client Credentials` are reusable. `POC-Respond Probe` and `POC-Mock Vendor (Custom Header)` are test only. `POC-Mock GTR Static (Custom Header)` is conditional: static mode only (D-AUTH). See [reusable-workflow.md](../reusable-workflow.md).
 
 ## Before you start
 
@@ -100,9 +100,8 @@ If you missed Folder Access, find the connection on the Connections page, click 
 | --- | --- | --- | --- | --- |
 | `POC-Okta` | Okta | (OAuth, Okta Workflows OAuth app) | always | Reusable |
 | `POC-Okta ITP` | Okta ITP | (OAuth, Okta Workflows OAuth app) | always | Reusable |
-| `POC-API None` | API Connector | None | always | Reusable, oauth mode: the `gtr` calls |
 | `POC-Mock Vendor (Custom Header)` | API Connector | Custom Header | always | Test only: the mock's API key |
-| `POC-AS Token (Basic)` | API Connector | Basic | `GTR_AUTH_MODE=oauth` | Reusable, oauth mode: the token request |
+| `POC-GTR Client Credentials` | API Connector | Client Credentials | `GTR_AUTH_MODE=oauth` | Reusable, oauth mode: fetches the token and signs the `gtr` calls |
 | `POC-Mock GTR Static (Custom Header)` | API Connector | Custom Header | `GTR_AUTH_MODE=static` | Conditional: static mode only |
 
 ### `POC-Okta` (Okta connector) [CON-1]
@@ -132,16 +131,18 @@ For each connection below:
 4. Choose the auth type from the dropdown.
 5. Fill in its values and click **Create**.
 
-If the selector has no **API Connector** icon, skip these three for now. Create each one later from the **+ New Connection** button on the first Raw Request card that uses it, with the same values. That card is in wf-01 for `POC-API None`, `POC-Mock Vendor (Custom Header)`, and `POC-Mock GTR Static (Custom Header)`, and in wf-02 for `POC-AS Token (Basic)`. Tell the executor.
+If the selector has no **API Connector** icon, skip these for now. Create each one later from the **+ New Connection** button on the first Raw Request card that uses it, with the same values. All of those cards are in wf-01 (C8.6.1 and C8.7.4.1). Tell the executor.
 
-- **`POC-API None`**: auth type **None**. No values.
 - **`POC-Mock Vendor (Custom Header)`**: auth type **Custom Header**; the page also calls it **Custom**, so pick whichever exists.
   - **Header Name**: `X-API-Key`.
   - **Header Value**: run `npm run secret:copy -- MOCK_VENDOR_API_KEY`, then paste.
-- **`POC-AS Token (Basic)`**, only when `GTR_AUTH_MODE=oauth`: auth type **Basic**.
-  - **Username**: run `npm run secret:copy -- tf:dispatcher_client_id`, then paste.
-  - **Password**: run `npm run secret:copy -- tf:dispatcher_client_secret`, then paste.
-  - Workflows sends these as `Authorization: Basic …`, which is the `client_secret_basic` method the dispatcher client uses (U11).
+- **`POC-GTR Client Credentials`**, only when `GTR_AUTH_MODE=oauth`: auth type **Client Credentials** (plan change 2026-10-28, D-TOKEN). Per App's GTR call uses it, and it fetches and attaches the token itself.
+  - **Access Token Path**: `<auth_server_issuer>/v1/token`. **Environment-specific.** The **custom** authorization server's issuer, for example `https://<org>.oktapreview.com/oauth2/<authServerId>`. Not the org authorization server.
+  - **Client ID**: run `npm run secret:copy -- tf:dispatcher_client_id`, then paste.
+  - **Client Secret**: run `npm run secret:copy -- tf:dispatcher_client_secret`, then paste.
+  - **Scope**: the connection form didn't show a Scope field in Okta's docs ([http_authorization](https://help.okta.com/wf/en-us/content/topics/workflows/function-reference/http/http_authorization.htm) lists only the path, ID, and secret). A hand test on 2026-10-28 did request the scope (`RequestedScopes` in the System Log), so enter it wherever your form offers it. ⚠ UNVERIFIED where: tell the executor which field you used, so the sheet can name it.
+  - Okta rejects the token request unless the dispatcher service app has **DPoP off** and the authorization server has an access policy rule that allows Client Credentials and the scope (`invalid_dpop_proof_missing_header` and `access_denied` in System Log otherwise). Terraform sets both in P3-T4.
+  - ⚠ UNVERIFIED: that it refreshes the token after it expires (U11). P6-T4 settles it.
 - **`POC-Mock GTR Static (Custom Header)`**, only when `GTR_AUTH_MODE=static`: auth type **Custom Header**.
   - **Header Name**: `Authorization`.
   - **Header Value**: run `npm run secret:copy -- bearer:MOCK_GTR_STATIC_BEARER`, then paste. The copied value already starts with `Bearer `.
@@ -153,7 +154,7 @@ Workflows doesn't test API Connector connections when you create them. The first
 - [ ] Folder `POC-ITP-FBM` exists.
 - [ ] `POC-FBM Logout Registry` has 6 columns with the types above and 4 rows, with Enabled true, true, true, false.
 - [ ] `POC-FBM Logout Results` has 5 columns and `POC-Respond Probe` has 7 columns, with the types above. Both are empty.
-- [ ] The Connections page lists `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode. Each shows **Folder Access** of 1 or more, the number of folders it's added to [SCR-4]. If a card in wf-01 or wf-02 later doesn't offer one of these connections, add the folder to it with **Open** > **Assign Folders** [SCR-4].
+- [ ] The Connections page lists `POC-Okta`, `POC-Okta ITP`, `POC-Mock Vendor (Custom Header)`, and the one connection for this mode (`POC-GTR Client Credentials` or `POC-Mock GTR Static (Custom Header)`). There is no `POC-API None` or `POC-AS Token (Basic)`. Each shows **Folder Access** of 1 or more, the number of folders it's added to [SCR-4]. If a card in wf-01 or wf-02 later doesn't offer one of these connections, add the folder to it with **Open** > **Assign Folders** [SCR-4].
 - [ ] You typed or pasted a secret only into a connection dialog, never into a table, a card, or the chat.
 
 ## Report to the executor

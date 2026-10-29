@@ -1,13 +1,13 @@
 # wf-02 POC-FBM Logout – Dispatcher (P6-T3, P6-T4, P10-T3)
 
-This flow is the guide's `FBM Logout – Dispatcher` (guide Step 3). It reads the user's profile and the enabled registry rows, gets one logout-scoped token, and calls `POC-FBM Logout – Per App` once per row, one row at a time. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md).
+This flow is the guide's `FBM Logout – Dispatcher` (guide Step 3). It reads the user's profile and the enabled registry rows and calls `POC-FBM Logout – Per App` once per row, one row at a time. Every card name and label is in the ledger, [wf-card-reference.md](wf-card-reference.md).
 
 The POC differs from the guide in three ways:
 - The profile comes from Okta – Custom API Action `GET /api/v1/users/{id}`, so it's a real profile object (D-PROFILE). Read User returns separate fields instead [ACT-3].
-- The token is always fetched, and its client secret lives in a connection (D-TOKEN).
+- It fetches no token. Per App's GTR call uses a Client Credentials connection that gets one itself (D-TOKEN, plan change 2026-10-28).
 - The per-app helper writes the Results rows (D-RESULTS). For Each has no outputs [FN-19].
 
-Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and C8 only.
+Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It no longer changes anything in this flow; the mode only picks Per App's connection.
 
 **Reusable or test only:** Part A is reusable. The Testing section is test only. Part B is conditional: it's built only if P10-T3 runs, and then it's reusable too. See [reusable-workflow.md](../reusable-workflow.md).
 
@@ -20,7 +20,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
 | Folder | `POC-ITP-FBM` |
 | Flow name | `POC-FBM Logout – Dispatcher` (en dash) |
 | Kind | Helper flow: its event card is Helper Flow [EVT-1] |
-| Save all data that passes through the flow | On. P6-T4 reads C6 and C7.2 from the executions [SCR-6]. **Test only:** a deployment turns it off, because the executions hold the access token |
+| Save all data that passes through the flow | On. P6-T4 reads C6 from the executions [SCR-6]. **Test only:** a deployment turns it off, because the executions hold users' emails |
 | Turn on | After the checklist. `POC-FBM Logout – Per App` must already be ON |
 
 ### Build
@@ -30,7 +30,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C7 and
    - Type the name `POC-FBM Logout – Dispatcher`.
    - Turn on **Save all data that passes through the flow** (**Save All Data**).
    - Click **Save**.
-3. Build C2–C8 below.
+3. Build C2–C6 and C8 below (there is no C7).
 4. **Save** and work through the checklist. Then click the activation control at the top of the flow builder: **Flow is OFF**. Okta's save-data page calls it the **Flow Activation** button [SCR-6, SCR-7]. Make sure **Save all data that passes through the flow** is on, then switch the flow ON. It should now show ON and **Saving data**. ⚠ UNVERIFIED that this is one control. If you find two, turn on saving with the Flow Activation button, and switch ON with the Flow is OFF toggle. Wait one minute before the first test run.
 
 Leave every card's gear > **Error handling** at its defaults [SCR-10].
@@ -77,46 +77,11 @@ Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, create one
 
 > ⚠ UNVERIFIED (U7): the filter dialog's operator and button labels for a Boolean column, and the row object's shape. Scenario S1 catches both: the disabled canary row must get no call, and you paste one row object.
 
-### C7 Error Handling – If Error [FN-10]: get the logout token
+### C7: unused (plan change 2026-10-28, D-TOKEN)
 
-**Oauth mode only.** In static mode, skip C7 entirely and leave C8's Access token empty.
+The dispatcher no longer fetches a token. In oauth mode, Per App's GTR call uses an API Connector **Client Credentials** connection (`POC-GTR Client Credentials`, wf-00), which fetches the token from the authorization server and adds the `Authorization` header. In static mode, Per App's connection holds the shared bearer. Either way there is nothing to build here. Don't add a card; C8 follows C6 and keeps its number so the plan and the report still point at the right card.
 
-- **Try** section:
-  - **C7.1 Object – Construct** [FN-12]
-
-    | Input name | Type | Value |
-    | --- | --- | --- |
-    | `Content-Type` | Text | `application/x-www-form-urlencoded` |
-    | `Accept` | Text | `application/json` |
-
-  - **C7.2 API Connector – Raw Request** [FN-24]
-    - **Connection**: `POC-AS Token (Basic)`. Click the connection name to pick it [SCR-4]. It sends the dispatcher client's ID and secret as `Authorization: Basic …` [CON-3].
-    - **URL**: `<auth_server_issuer>/v1/token`. **Environment-specific.** `<auth_server_issuer>` is the issuer of the **custom** authorization server `POC-FBM-AS` (Terraform output `auth_server_issuer`), for example `https://<org>.oktapreview.com/oauth2/<authServerId>`. It is not the org authorization server (`https://<org>.oktapreview.com`): the design needs a custom scope and a policy rule for the dispatcher client (F21), and those are defined on the custom server (P3-T4). A new environment has a new server ID, so this URL changes.
-    - **Method**: `POST`
-    - **Headers** ← C7.1.output
-    - **Query**: leave empty
-    - **Body**: `grant_type=client_credentials&scope=poc.fbm.logout`. **Environment-specific.** The scope must match the scope defined on that custom server, and every app's token check must require the same scope and audience.
-  - **C7.3 JSON – Parse** [FN-17]
-    - **string** ← C7.2.Body
-    - **output**: set the type to Object.
-  - **C7.4 Object – Get**
-    - **object** ← C7.3.output
-    - **path**: `access_token`
-    - **output**: Text.
-- **If Error** section (use the dropdown at the top of C7):
-  - **C7.5 Date & Time – Now** [FN-16]
-  - **C7.6 Tables – Create Row** [FN-23]: **Choose Table** > select `POC-FBM Logout Results` > **Choose**, then **Save** on the card. Check all five columns, then **Save** [FN-23].
-    - **Time** ← C7.5.date
-    - **User ID** ← C1.User ID
-    - **App name**: `POC-AS token`
-    - **Status code**: `0`
-    - **Outcome**: `failure`
-  - **C7.7 Flow Control – Assign** [FN-3]: create one input, `access token`, type Text, value `unavailable`.
-- **View Outputs** on C7: add `access token`, type Text.
-  - Try field ← C7.4.output
-  - If Error field ← C7.7.access token
-
-If the token request fails, the dispatcher still calls every app. The `gtr` apps get `Bearer unavailable` and answer 401, which gives failure rows. In the POC, the vendor app uses its own connection, so it's still logged out. ⚠ UNVERIFIED: that a 401 is caught like any other error status (U6, the same path S2 tests). If a Per App execution fails instead, For Each skips the rows after it [FN-19].
+What this removes: the token request (the old C7.1–C7.4), the `POC-AS token` failure row (old C7.6), and the `Bearer unavailable` fallback. A token problem now shows up inside Per App, as a failure row for each `gtr` app (usually a 401 from the app, or an error from the connection).
 
 ### C8 List – For Each [FN-19]
 
@@ -128,7 +93,6 @@ If the token request fails, the dispatcher still calls every app. The `gtr` apps
 | --- | --- |
 | `Row` | click the field and choose **item** from the dropdown |
 | `User profile` | ← C5.output |
-| `Access token` | ← C7.access token (oauth mode); leave empty (static mode) |
 | `Attempt` | `1` |
 | `User ID` | ← C1.User ID |
 | **concurrency** | `1` (one row at a time) |
@@ -138,12 +102,12 @@ For Each has no outputs. Each Per App execution writes its own Results rows. If 
 ### Checklist (Part A)
 
 - [ ] `POC-FBM Logout – Dispatcher` is in folder `POC-ITP-FBM`. Its Flow Activation button reads **Saving data**, and it's ON.
-- [ ] Cards C1–C8 are present. C7 (oauth mode only) has C7.1–C7.4 in Try and C7.5–C7.7 in If Error.
+- [ ] Cards C1–C6 and C8 are present. There is no C7.
 - [ ] C2 is the first card after C1, and value b is the real connection-account user ID.
-- [ ] C4 uses `POC-Okta`, and C7.2 uses `POC-AS Token (Basic)`.
+- [ ] C4 uses `POC-Okta`. No card in this flow uses an API Connector connection.
 - [ ] C6 reads `POC-FBM Logout Registry` with All matching rows and the filter Enabled = true.
-- [ ] C8 calls `POC-FBM Logout – Per App` with `Row` = item, `Attempt` = `1`, and concurrency `1`.
-- [ ] No secret is typed into any card. The token body in C7.2 holds no secret.
+- [ ] C8 calls `POC-FBM Logout – Per App` with `Row` = item, `User profile` ← C5.output, `Attempt` = `1`, `User ID` ← C1.User ID, and concurrency `1`. There is no `Access token` field.
+- [ ] No secret is typed into any card.
 
 ### Report to the executor (Part A)
 
@@ -161,7 +125,7 @@ For Each has no outputs. Each Per App execution writes its own Results rows. If 
 
 **S1 (all apps succeed):**
 - Expand C6's **Rows** output. Paste one row object into chat; it holds only registry values and row metadata (U7).
-- Report C7.2's **Status Code**; 200 is expected (U11). In static mode, say "static".
+- Open one `POC-FBM Logout – Per App` execution for an OIDC row and report C8.6.1's **Status Code** (204 or 404 is expected), which shows the Client Credentials connection supplied a token the mock accepted (U11). In static mode, say "static".
 - Open `POC-FBM Logout – Per App` > Execution History. Report how many executions this run started; 3 are expected, one per enabled row.
 
 **S2 (SAML returns 422):**

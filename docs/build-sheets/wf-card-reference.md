@@ -256,6 +256,8 @@ Every card, event, connector action, connection type, console screen, and platfo
   - **None**: no values. Used for requests that carry their own Authorization header, or unauthenticated ones.
   - **Basic**: **Username** and **Password**. Every request carries `Authorization: Basic ` followed by base64 of `<username>:<password>`.
   - **Custom Header** (the section heading on the page says **Custom**): **Header Name** and **Header Value**, sent with every request.
+  - **Client Credentials**: **Access Token Path**, **Client ID**, **Client Secret** (the page lists no scope field). The page says credentials go in the request body, not a Basic header. The sheets use it for the `gtr` call (D-TOKEN). **Hand-tested 2026-10-28:** it fetched a token from a custom authorization server and attached it (Okta's `/userinfo` answered `403 insufficient_scope` rather than 401), the System Log showed `RequestedScopes` set, and Okta authenticated it as `client_secret_basic`, so the page's body claim didn't match what Okta logged. It failed with `invalid_dpop_proof_missing_header` until DPoP was turned off on the service app, and with `access_denied` until the server had a policy rule for the client.
+  - **OAuth**: an authorization-code flow with an Authorize Path and a redirect URI. Not used.
 - **Behavior relied on:**
   - Credentials are stored securely, and the header is created automatically.
   - API Connector connections aren't tested when you create them. Test them with **Run this card** [SCR-8] or a flow run.
@@ -441,7 +443,7 @@ Categories and card names were checked against the [function reference](https://
 - **Sections:** **Try** (the steps to attempt) and **If Error** (the steps that run if any Try step errors). A dropdown switches between them.
 - **Error object:** each If Error section gets one, with these keys:
   - `message`: error text, when available.
-  - `code`: error code, for example `500`.
+  - `code`: error code, for example `500`. ⚠ The documented key; a Raw Request 403 observed 2026-10-28 had `statusCode` instead and no `code`.
   - `method`: ID of the step that failed.
   - `flo`: ID of the flow.
   - `execution`: ID of the execution.
@@ -455,7 +457,8 @@ Categories and card names were checked against the [function reference](https://
   - KB-2's screenshot shows the design-time key list of the **Error** object: `message`, `method`, `flo`, `execution`, and an **Enter key name here** field. It doesn't show runtime values, so it doesn't prove `code` is absent.
   - KB-6 quotes an Okta-card error as `{"error":{"status":500,"message":{"statusCode":400,…}}}`, a 500 that wraps the API's 400. That's an Okta connector card, not Raw Request.
   - The Helper flows page says card error objects often carry `statusCode`.
-- ⚠ UNVERIFIED (U6): whether `code` is present for a Raw Request HTTP error, and whether it's the HTTP status or a wrapping 500. Also unverified: what it holds when a request fails without a status. P6-T4 scenario S2 settles it for 422, and catches both wrong cases:
+- **Observed 2026-10-28 (U6 for a 403):** a Raw Request error object had `statusCode` (403), `headers`, `body`, `message`, `kind`, `hostname`, `module`, `flo`, `method`, `execution` and no `code`. The sheets read `statusCode`.
+- ⚠ UNVERIFIED (U6): whether the same holds for a 422 (scenario S2), and whether it's the HTTP status or a wrapping 500. Also unverified: what it holds when a request fails without a status. P6-T4 scenario S2 settles it for 422, and catches both wrong cases:
   - If `code` is 500, SAML gets three needless retries, so the mock records four calls instead of one.
   - If `code` is missing and Object – Get errors, the SAML execution fails before writing its Results row, and For Each skips any rows after it.
   

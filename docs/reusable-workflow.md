@@ -32,10 +32,10 @@ The build sheets mark each part the same way; anything untagged is reusable.
 | `POC-ITP FBM – Respond by Email` | wf-04 | Optional | Keep it if the POC recommends it (D-EMAIL), and always under probe outcome C1 |
 | `POC-ITP FBM – Risk Detected (fallback)` | wf-05 | Conditional (P10-T5) | |
 | Connections `POC-Okta` and `POC-Okta ITP` | wf-00 | Reusable | |
-| Connections `POC-API None` and `POC-AS Token (Basic)` | wf-00 | Reusable (oauth mode) | |
+| Connection `POC-GTR Client Credentials` (auth type Client Credentials) | wf-00 | Reusable (oauth mode) | It fetches the token and signs the `gtr` calls |
 | Connection `POC-Mock GTR Static (Custom Header)` | wf-00 | Conditional (static mode, D-AUTH) | Only if the POC ended in static mode |
 | Connection `POC-Mock Vendor (Custom Header)` | wf-00 | Test only | It holds the mock's API key |
-| **Save all data that passes through the flow** on Per App and Dispatcher | wf-01, wf-02 | Test only | Turn it off. Their executions hold the 5-minute access token |
+| **Save all data that passes through the flow** on Per App and Dispatcher | wf-01, wf-02 | Test only | Turn it off. Their executions hold users' emails, and may hold the connection's 5-minute access token (unverified) |
 
 ### Okta
 
@@ -67,7 +67,7 @@ The POC's results change the reusable workflow. Read them in `reports/poc-result
 | Decision or finding | What it changes |
 | --- | --- |
 | `probe.outcome`: A, B, or C1 | Which C5 Respond uses. Under C1, the SOC uses only Respond by Email |
-| `authz.clientCredentials`: `available` (oauth mode) or `unavailable` (static mode) | Which connection Per App's C8.6.1 uses, and whether the dispatcher fetches a token (C7) |
+| `authz.clientCredentials`: `available` (oauth mode) or `unavailable` (static mode) | Which connection Per App's C8.6.1 uses: the Client Credentials connection (oauth) or the static Custom Header connection |
 | `wf.rawRequestErrorStatusPath` | The path in Per App's C8.6.2 (and C8.7.4.2) |
 | `wf.searchRowsRowShape` | The paths in Per App's C3 and C5–C7 |
 | D-RISK (`decision.riskReset`) | Whether Respond has Part C |
@@ -88,7 +88,7 @@ Accept: application/json
 {"sub_id":{"format":"email","email":"<the user's value of the row's Identifier attribute>"}}
 ```
 
-**The token.** In oauth mode, it's a 5-minute client-credentials access token from your custom authorization server. Validate it as the POC's mock does (PLAN P2-T2):
+**The token.** In oauth mode, it's a 5-minute client-credentials access token from your custom authorization server, fetched and attached by a Workflows Client Credentials connection. Validate it as the POC's mock does (PLAN P2-T2):
 - the signature, against `<issuer>/v1/keys` (RS256);
 - `iss` is the issuer and `aud` is the server's audience;
 - `scp` contains the logout scope;
@@ -119,21 +119,20 @@ There are two ways to get the flows:
 
 1. Choose the connection account: a super admin that will authorize the Okta connections. Note its user ID, because every flow refuses it.
 2. Check the Okta Workflows OAuth app for the scopes that wf-00 lists in "Before you start", and grant any that are missing.
-3. Create a custom authorization server with a logout scope. Create a service app for the dispatcher that uses only the client credentials grant and `client_secret_basic`, and a policy rule that lets it get only that scope (as in P3-T4). Note the issuer, audience, scope, client ID, and client secret.
+3. Create a custom authorization server with a logout scope. Create a service app for the dispatcher that uses only the client credentials grant, with **DPoP turned off**, and a policy rule that lets it get only that scope (as in P3-T4). If you create it by hand, use the **classic** app wizard: on 2026-10-28 the new API Services wizard produced a client that failed with "This client cannot use a custom authorization server". Note the issuer, audience, scope, client ID, and client secret.
 4. Make each in-house app implement the endpoint above.
 
 ### 2. Workflows
 
 1. Create a folder. Import the `.folder` file into it from the folder's **Actions** menu > **Import** [SCR-14], or build the flows from the sheets.
 2. On the **Connections** page, create these connections with **Folder Access** set to your folder (wf-00 §3):
-   - Okta and Okta ITP, both authorized by the connection account.
-   - API Connector with auth type **None**, for the `gtr` calls.
-   - API Connector with auth type **Basic**, holding the dispatcher client's ID and secret, for the token request.
-   - In static mode only, the Custom Header connection replaces both API Connector connections.
+   - Okta and Okta ITP, both authorized by the connection account. Steps are in [okta-connection-setup.md](okta-connection-setup.md).
+   - API Connector with auth type **Client Credentials**, holding the dispatcher client's ID and secret and the custom server's token URL, for the `gtr` calls. It fetches the token and adds the `Authorization` header.
+   - In static mode only, a Custom Header connection replaces it.
    - No vendor connection.
 3. In an imported copy, give every card its connection back [SCR-14]:
-   - Per App: C8.6.1 (None, or the static connection).
-   - Dispatcher: C4 (Okta) and C7.2 (Basic), plus Part B's Custom API Action cards (Okta) if the POC built it, including H5.1 in the sweep helper.
+   - Per App: C8.6.1 (the Client Credentials connection, or the static connection).
+   - Dispatcher: C4 (Okta), plus Part B's Custom API Action cards (Okta) if the POC built it, including H5.1 in the sweep helper.
    - Respond: C8.1, and C13 if the POC added Part C (Okta ITP).
    - Respond by Email: C3 (Okta) and C5.1 (Okta ITP).
    - Fallback: C1 (Okta ITP) and C6 (Okta).
@@ -142,7 +141,7 @@ There are two ways to get the flows:
    - Respond: remove C2 and C3, then delete the `POC-Respond Probe` table.
 5. Replace the org-specific values typed into cards:
    - The connection-account user ID: Per App C2; Dispatcher C2 (and H2 if built); Respond C4 and C7; Respond by Email C4; fallback C4.
-   - Dispatcher C7.2: the URL `<issuer>/v1/token`, and the scope in the body.
+   - The `POC-GTR Client Credentials` connection: Access Token Path `<issuer>/v1/token`, the scope, and the dispatcher client ID and secret.
    - Fallback C10: the ID of the group your entity risk rule targets.
 6. Add one registry row per FBM app with an endpoint: App name, App instance ID, Method `gtr`, Endpoint or API, Identifier attribute (normally `email`), and Enabled `true`.
 7. Turn off **Save all data that passes through the flow** on Per App and Dispatcher.
@@ -158,13 +157,13 @@ Anything below breaks, or silently points at the wrong place, if you copy the fl
 | Org domain | `POC-Okta` and `POC-Okta ITP` connections (wf-00 §3), written as `<org subdomain>.oktapreview.com` | Your org's domain. A production org isn't on `oktapreview.com` |
 | Okta Workflows OAuth app client ID and secret | The same two connections | The values from that org's own Okta Workflows OAuth app |
 | Connection-account user ID | Per App C2; Dispatcher C2 (and H2); Respond C4 and C7; Respond by Email C4; fallback C4 | That org's connection account. A wrong ID doesn't error: the flow stops refusing the real account |
-| Authorization server issuer | Dispatcher C7.2 URL | The **custom** authorization server's issuer, including its server ID. Not the org server |
-| Logout scope | Dispatcher C7.2 body | The scope defined on that custom server |
-| Dispatcher client ID and secret | The `POC-AS Token (Basic)` connection | The service app in that org. The secret never goes in a card |
+| Authorization server issuer | The Client Credentials connection's Access Token Path | The **custom** authorization server's issuer, including its server ID. Not the org server |
+| Logout scope | The Client Credentials connection | The scope defined on that custom server |
+| Dispatcher client ID and secret | The `POC-GTR Client Credentials` connection | The service app in that org. The secret never goes in a card |
 | Authorization server audience, scope, and issuer | Each app's token validation | Every GTR app must accept the same audience and scope the dispatcher's token carries |
 | Risk group ID | Fallback C10 (and the name in C11's message) | The group your entity risk rule targets |
 | Registry rows | `POC-FBM Logout Registry` table | One row per real app: its endpoint, instance ID, and identifier attribute. Import drops table data |
-| `GTR_AUTH_MODE` | Dispatcher C7 and C8, Per App C8.1, C8.2, C8.6.1 | `oauth` or `static`, decided per environment by whether client credentials is available there |
+| `GTR_AUTH_MODE` | Per App C8.6.1's connection | `oauth` or `static`, decided per environment by whether client credentials is available there |
 | Flow and table names | Call Flow, For Each, and Tables cards | Renaming a flow or table means re-pointing every card that references it |
 
 ### 3. ITP and the SOC

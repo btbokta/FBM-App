@@ -63,10 +63,10 @@ A Workflows table holds up to 500,000 rows ([Workflows system limits](https://he
 
 `FBM Logout – Per App` logs one user out of one app and reports the result; the dispatcher calls it once per registry row.
 
-1. Create a flow named `FBM Logout – Per App` and add the Helper Flow event card with these inputs: Row (object), User profile (object), Access token. Then use Object – Get to read the identifier value from the profile, with the row's Identifier attribute as the key.
+1. Create a flow named `FBM Logout – Per App` and add the Helper Flow event card with these inputs: Row (object), User profile (object). Then use Object – Get to read the identifier value from the profile, with the row's Identifier attribute as the key.
 2. Add a branch on the row's Method.
 3. For `gtr` (in-house apps), use HTTP – Raw Request to POST to the row's Endpoint:
-   1. Headers: `Authorization: Bearer <access token>` and `Content-Type: application/json`.
+   1. Headers: `Content-Type: application/json`. The connection adds `Authorization: Bearer <access token>`.
    2. Body: `{"sub_id":{"format":"email","email":"<profile email>"}}`.
    3. Only Okta can sign its native ULO token, so these endpoints also accept a client-credentials access token with a dedicated logout scope. Otherwise they follow Okta's Global Token Revocation contract ([Build Universal Logout for your app](https://developer.okta.com/docs/guides/oin-universal-logout-overview/)).
 4. Optional, only if the registry has SaaS apps: for `vendor`, use the vendor connector's Custom API Action to call its session-revocation API with the identifier value (see Appendix). Without this branch, a row with any Method other than `gtr` gets no call and is recorded as a failure.
@@ -83,10 +83,9 @@ A Workflows table holds up to 500,000 rows ([Workflows system limits](https://he
 1. Create a flow named `FBM Logout – Dispatcher` with the Helper Flow event card and one input: User ID.
 2. Okta – Read User with that user ID, to get the user's profile.
 3. Tables – Search Rows on `FBM Logout Registry` where Enabled is true.
-4. If any row's Method is `gtr`, get one client-credentials access token from your authorization server with HTTP – Raw Request.
-5. List – For Each over the rows, calling `FBM Logout – Per App` with the row, the user profile, and the token.
-6. Tables – Create Row in `FBM Logout Results` for each result.
-7. Optional token sweep, only if test T5 shows an FBM OIDC refresh token survives:
+4. List – For Each over the rows, calling `FBM Logout – Per App` with the row and the user profile. The `gtr` call in Per App uses an API Connector **Client Credentials** connection, which fetches the client-credentials access token from your authorization server and attaches it, so the dispatcher passes no token.
+5. Tables – Create Row in `FBM Logout Results` for each result.
+6. Optional token sweep, only if test T5 shows an FBM OIDC refresh token survives:
    1. Okta – Custom API Action: GET `/api/v1/users/{userId}/clients` to list the clients that hold grants or tokens for the user.
    2. For each client, DELETE `/api/v1/users/{userId}/clients/{clientId}/tokens` to revoke its refresh tokens ([User OAuth 2.0 token management API](https://developer.okta.com/docs/api/openapi/okta-management/management/tag/UserOAuth/)).
 

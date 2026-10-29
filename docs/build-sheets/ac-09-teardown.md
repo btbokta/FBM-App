@@ -11,7 +11,7 @@ Do this after `npm run teardown -- --yes` and `npm run teardown:verify` have pas
    - `POC-FBM Token Sweep – Per Client` (if built)
    - `POC-FBM Logout – Per App`
 3. **Workflows tables and folder.** Delete `POC-FBM Logout Registry`, `POC-FBM Logout Results`, and `POC-Respond Probe`, then delete folder `POC-ITP-FBM`.
-4. **Workflows connections.** Delete `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-AS Token (Basic)` or `POC-Mock GTR Static (Custom Header)`, and `POC-Mock Vendor (Custom Header)`. wf-00 creates them in the folder, so look on the **Connections** page. If a connection is no longer listed after the folder was deleted, report it as not applicable.
+4. **Workflows connections.** Delete `POC-Okta`, `POC-Okta ITP`, `POC-GTR Client Credentials` or `POC-Mock GTR Static (Custom Header)`, and `POC-Mock Vendor (Custom Header)`. wf-00 creates them in the folder, so look on the **Connections** page. If a connection is no longer listed after the folder was deleted, report it as not applicable.
 5. **Okta API token.** In the Admin Console, Security > API > Tokens: **Revoke** the `POC-Terraform` token (or whichever token you put in `OKTA_API_TOKEN`).
 6. **Vercel.** Delete the `POC-FBM-Mock` token. In the dashboard, confirm the project and the `poc-fbm-mock-kv` store are gone.
 7. **Local files.** In the repo root, run `rm -rf keys state .env mock-app/.vercel .vercel`.

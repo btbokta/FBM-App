@@ -434,3 +434,13 @@ Checks rerun after BF-2:
 - Every relative link in the changed files resolves, including the new links to reusable-workflow.md.
 - Every card that reusable-workflow.md names for a connection or an org-specific value exists in its sheet, with that connection or value.
 - **Not reviewed independently:** no reviewer subagent checked these edits.
+
+## 13. Change after the report: Client Credentials connection (2026-10-28)
+
+The traces and findings above were written for the earlier token design, so read these parts as superseded:
+
+- **Superseded:** every trace that goes through Dispatcher C7 (C7.1–C7.7), the `POC-AS token` failure row, the `Bearer unavailable` fallback (D-5), the `Access token` input on Per App, and Per App C8.1. Traces D-6 (static mode) and PA-8 (vendor) still hold, apart from the removed `Access token` input. V3 and U11 (a Basic connection's header against the token endpoint) no longer apply.
+- **What replaced it:** Per App's `gtr` Raw Request (C8.6.1) uses an API Connector **Client Credentials** connection, which fetches and attaches the token. See PLAN D-TOKEN and U11, wf-00, wf-01, and wf-02.
+- **Hand-tested the same day (another org):** a Raw Request through the connection got a 403 `insufficient_scope` from Okta's `/userinfo`, which shows a valid token was attached. The connection needed a classic-wizard service app with DPoP off and an access policy rule. A failing Raw Request's error object has `statusCode` and no `code` (this settles U6 for a 403).
+- **Still unverified:** that the connection refreshes after expiry; whether it fetches one token or one per call; which form field takes the scope; and whether a Terraform-created service app behaves like the classic-wizard one. The traces were not redone for the new design.
+- **Not reviewed independently:** no reviewer subagent checked these edits.

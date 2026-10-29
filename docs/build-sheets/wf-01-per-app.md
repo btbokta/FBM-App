@@ -4,7 +4,9 @@ This flow is the guide's `FBM Logout – Per App` (guide Step 2). It logs one us
 
 **Reusable or test only:** the whole flow is reusable except the vendor path, C8.7 and its true branch, which is **optional**. Only a deployment with SaaS apps in the registry needs it; the POC builds it to test against the mock. A deployment with only `gtr` apps uses the GTR-only build at the end of C8 instead and needs no vendor connection. See [reusable-workflow.md](../reusable-workflow.md).
 
-Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.1, C8.2, and C8.6.1 only.
+Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.6.1's connection only.
+
+**No token passes through this flow (plan change 2026-10-28, D-TOKEN).** In oauth mode, C8.6.1 uses an API Connector **Client Credentials** connection, which fetches the token from the authorization server and adds `Authorization: Bearer …` itself. So the flow has no `Access token` input and no Authorization header card. C8.1 is deliberately left unused and the cards keep their numbers, so the plan and the report still point at the right cards.
 
 ## Flow settings
 
@@ -17,7 +19,7 @@ Connection mode for this run: `GTR_AUTH_MODE=<GTR_AUTH_MODE>`. It changes C8.1, 
 | First save | Right after C1, so the flow exists when C15.4 has to select it [SCR-8] |
 | Turn on | After the checklist, before you build wf-02 |
 
-Saving all data puts the test users' emails and the 5-minute access token from C1 into execution history, where other Workflows admins can see them [SCR-6]. That's accepted for this POC; see the report. **Test only:** a deployment turns saving off on this flow.
+Saving all data puts the test users' emails into execution history, where other Workflows admins can see them [SCR-6]. ⚠ UNVERIFIED: whether the connection's token also shows in a Raw Request card's saved request headers. Check one execution after the first run, and if it does, treat the history as holding a live token. That's accepted for this POC; see the report. **Test only:** a deployment turns saving off on this flow.
 
 ## Build
 
@@ -35,13 +37,12 @@ Notation: `←` means drag that output into the field; a value in `code` means t
 
 ### C1 Helper Flow (event) [EVT-1]
 
-Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, click **Click or drag to create** five times and create these fields:
+Click **Add Event** > **Helper Flow**. Under **Inputs to this Flow**, click **Click or drag to create** four times and create these fields:
 
 | Name | Type |
 | --- | --- |
 | `Row` | Object |
 | `User profile` | Object |
-| `Access token` | Text |
 | `Attempt` | Number |
 | `User ID` | Text |
 
@@ -96,16 +97,12 @@ An If/Else card takes one condition. So C8 tests for `gtr`, and its false branch
 
 #### True branch (upper, orange): `gtr`
 
-**C8.1 Text – Concatenate** [FN-13]. **Oauth mode only**; in static mode skip C8.1.
-- **text 1**: `Bearer`
-- **text 2**: a single space
-- **text 3** (click **Click or drop here to create**) ← C1.Access token
+**C8.1: unused.** The Authorization header comes from the connection in both modes, so there is nothing to build here. Don't add a card; the next card is C8.2.
 
-**C8.2 Object – Construct** [FN-12]: the request headers. Create these inputs with **Click or drop to create**:
+**C8.2 Object – Construct** [FN-12]: the request headers. Create these inputs with **Click or drop to create**. Don't create an `Authorization` input; the connection adds it in both modes.
 
 | Input name | Type | Value |
 | --- | --- | --- |
-| `Authorization` | Text | ← C8.1.output. **Oauth mode only**; in static mode don't create this input, because the connection adds the header |
 | `Content-Type` | Text | `application/json` |
 | `Accept` | Text | `application/json` |
 
@@ -130,7 +127,7 @@ An If/Else card takes one condition. So C8 tests for `gtr`, and its false branch
 
 - **Try** section:
   - **C8.6.1 API Connector – Raw Request** [FN-24]
-    - **Connection** (name at the top of the card; click it to change [SCR-4]): `POC-API None` in oauth mode, `POC-Mock GTR Static (Custom Header)` in static mode.
+    - **Connection** (name at the top of the card; click it to change [SCR-4]): `POC-GTR Client Credentials` in oauth mode (an API Connector connection of auth type **Client Credentials**, built in wf-00), `POC-Mock GTR Static (Custom Header)` in static mode.
     - **URL** ← C6.output
     - **Method**: `POST`
     - **Headers** ← C8.2.output
@@ -139,23 +136,23 @@ An If/Else card takes one condition. So C8 tests for `gtr`, and its false branch
 - **If Error** section (use the dropdown at the top of C8.6):
   - **C8.6.2 Object – Get**
     - **object** ← the **Error** object of C8.6's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
-    - **path**: `code`
+    - **path**: `statusCode`
     - **output**: set the type to Number.
 - **View Outputs** on C8.6: add `status`, type Number.
   - Try field ← C8.6.1.Status Code
   - If Error field ← C8.6.2.output
 - In C8's outputs: the true value of `status code` ← C8.6.status.
 
-> The If Error page lists the error object's fields as `message`, `code`, `method`, `flo`, and `execution` [FN-10]. An Okta KB screenshot shows an API Connector call that got HTTP 500: the card errored into If Error, and the Error object held `code` 500 [KB-7].
+> **Observed 2026-10-28 (U6 for a 4xx):** a Raw Request that got `403 Forbidden` errored into If Error, and the Error object had `statusCode` (403), `headers`, `body`, `message`, `kind` (`HTTP Request Error`), `hostname`, and `module`. It had no `code` key. So the path is `statusCode`, not the `code` the If Error page lists [FN-10]. The KB screenshot with HTTP 500 [KB-7] showed `statusCode` too.
 >
-> ⚠ UNVERIFIED (U6): that Raw Request behaves the same for a 4xx, so `code` holds 422. Mapping both sections into `status` covers either behavior. Scenario S2 forces a 422 and shows which case applies:
+> Still unverified: that scenario S2's 422 gives the same shape. Scenario S2 forces a 422 and confirms it:
 > - The right path gives one SAML call and one Results row (422, failure).
 > - A wrapping 500 gives four SAML calls ending in `failure-retries-exhausted`.
-> - A missing `code` fails the SAML execution before it writes a row.
+> - A missing `statusCode` fails the SAML execution before it writes a row.
 >
-> The executor then gives you the right path for C8.6.2 and C8.7.4.2.
+> The executor then confirms the path for C8.6.2 and C8.7.4.2.
 >
-> ⚠ UNVERIFIED: a request that fails with no HTTP status at all, such as a timeout, DNS, or TLS failure. If `code` is then missing or not a number, C8.6.2 may fail. The execution would end in an error without a Results row, and the dispatcher would skip the remaining apps [FN-19]. No PLAN task tests this yet; see the report, PA-6 and PC3.
+> ⚠ UNVERIFIED: a request that fails with no HTTP status at all, such as a timeout, DNS, or TLS failure. If `statusCode` is then missing or not a number, C8.6.2 may fail. The execution would end in an error without a Results row, and the dispatcher would skip the remaining apps [FN-19]. No PLAN task tests this yet; see the report, PA-6 and PC3.
 
 #### False branch (lower, blue): not `gtr`
 
@@ -200,7 +197,7 @@ The POC build adds one card here, C8.7, and everything else in this branch goes 
 - **If Error** section:
   - **C8.7.4.2 Object – Get**
     - **object** ← the **Error** object of C8.7.4's If Error section. It's shown at the left of the If Error section, under **context** [FN-10, KB-7].
-    - **path**: `code`
+    - **path**: `statusCode` (same shape as C8.6.2)
     - **output**: Number
 - **View Outputs** on C8.7.4: add `status`, type Number.
   - Try field ← C8.7.4.1.Status Code
@@ -344,7 +341,6 @@ The output you use is **date** (Date & Time).
 | --- | --- |
 | Row | ← C1.Row |
 | User profile | ← C1.User profile |
-| Access token | ← C1.Access token |
 | Attempt | ← C15.3.total |
 | User ID | ← C1.User ID |
 
@@ -392,19 +388,20 @@ Save. Then turn the flow on (Build step 4).
 
 - [ ] `POC-FBM Logout – Per App` is in folder `POC-ITP-FBM`. The **Flow Activation** button reads **Saving data**, and the flow is ON.
 - [ ] There are 16 top-level cards, C1–C16.
-  - C8's true branch holds C8.1–C8.6, and its false branch holds only C8.7.
+  - C8's true branch holds C8.2–C8.6 (C8.1 is unused), and its false branch holds only C8.7.
   - C8.7's true branch holds C8.7.1–C8.7.4, and its false branch holds C8.7.5.
   - C8.6 and C8.7.4 each have a Try card and an If Error card.
   - C15 has a true branch (C15.1–C15.4) and a false branch (C15.5).
-- [ ] C1 has exactly these inputs: `Row` (Object), `User profile` (Object), `Access token` (Text), `Attempt` (Number), `User ID` (Text).
+- [ ] C1 has exactly these inputs: `Row` (Object), `User profile` (Object), `Attempt` (Number), `User ID` (Text). There is no `Access token` input.
 - [ ] C2 is the first card after C1, and value b is the real connection-account user ID.
 - [ ] No Continue If or Return card sits inside a branch or section.
-- [ ] C8.6.1 uses `POC-API None` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.7.4.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
+- [ ] C8's true branch has no card numbered C8.1, and C8.2's headers have no `Authorization` input.
+- [ ] C8.6.1 uses `POC-GTR Client Credentials` (oauth) or `POC-Mock GTR Static (Custom Header)` (static). C8.7.4.1 uses `POC-Mock Vendor (Custom Header)`. Both are left at the default error handling.
 - [ ] C8.6 and C8.7.4 each output `status` (Number), with both the Try and If Error fields filled.
 - [ ] C8 and C8.7 each output `status code` (Number), with the true and false values filled.
 - [ ] Deployments only, GTR-only build: C8's false branch holds only the C8.7 Assign, and no card uses a vendor connection.
 - [ ] C9 has 23 rows and Otherwise `failure`. C12 has 6 rows and Otherwise `failure`.
-- [ ] C15.4 calls this flow, with all five inputs mapped and outputs `Status code` (Number), `Outcome` (Text), `Attempts` (Number). C16 returns the same three names and types.
+- [ ] C15.4 calls this flow, with all four inputs mapped and outputs `Status code` (Number), `Outcome` (Text), `Attempts` (Number). C16 returns the same three names and types.
 - [ ] No secret is typed into any card.
 
 ## Report to the executor
