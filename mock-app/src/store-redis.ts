@@ -11,6 +11,7 @@ import {
   type CallRecord,
   type FaultMode,
   type PkceData,
+  type SessionDetails,
   type SessionInfo,
   type Store,
   type StoreHealth,
@@ -18,7 +19,8 @@ import {
 
 // Key layout (all under "poc:" so resetAll can find them):
 //   poc:user:<email> hash {sub, as}          poc:sub:<sub> -> email
-//   poc:sess:<sid> hash {app, email}         poc:usess:<app>:<email> set of sids
+//   poc:sess:<sid> hash {app, email, d}      poc:usess:<app>:<email> set of sids
+//     d is the sign-in details as one object {profile, accessToken, hasRefreshToken, authServer}
 //   poc:calls list of call records           poc:fault:<app> {mode, emails}   poc:faultseen:<app> set of emails
 //   poc:apptok:<as>:<email>, poc:escrow:<as>:<email>  {v: refreshToken}
 //   poc:pkce:<state> with EX
@@ -50,17 +52,20 @@ export class RedisStore implements Store {
     return row?.email ?? null;
   }
 
-  async createSession(app: AppKey, email: string): Promise<string> {
+  async createSession(app: AppKey, email: string, details: SessionDetails = {}): Promise<string> {
     const sid = randomUUID();
     const key = lower(email);
-    await this.redis.hset(`poc:sess:${sid}`, { app, email: key });
+    // The details go in as one object so the client never has to guess how to read a bare token string back.
+    const hasDetails = Object.values(details).some((v) => v !== undefined);
+    await this.redis.hset(`poc:sess:${sid}`, hasDetails ? { app, email: key, d: details } : { app, email: key });
     await this.redis.sadd(`poc:usess:${app}:${key}`, sid);
     return sid;
   }
 
   async getSession(sid: string): Promise<SessionInfo | null> {
-    const row = await this.redis.hgetall<{ app: AppKey; email: string }>(`poc:sess:${sid}`);
-    return row ? { app: row.app, email: String(row.email) } : null;
+    const row = await this.redis.hgetall<{ app: AppKey; email: string; d?: SessionDetails }>(`poc:sess:${sid}`);
+    if (!row) return null;
+    return { app: row.app, email: String(row.email), ...(row.d && typeof row.d === "object" ? row.d : {}) };
   }
 
   async countSessions(email: string): Promise<Record<AppKey, number>> {

@@ -172,13 +172,13 @@ describe("GET /oidc/callback", () => {
   it("signs the user in: cookie set, user registered, tokens stored, refresh token reported", async () => {
     const { state, nonce } = await startFlow("custom");
     idp.tokenResponse = async () =>
-      new Response(JSON.stringify({ id_token: await idToken(idp, { nonce }), refresh_token: "rt-secret-123" }));
+      new Response(
+        JSON.stringify({ id_token: await idToken(idp, { nonce }), refresh_token: "rt-secret-123", access_token: "at-visible-456" }),
+      );
 
     const res = await callback({ code: "CODE", state });
-    expect(res.status).toBe(200);
-    const html = await res.text();
-    expect(html).toContain(`Signed in as ${EMAIL} via custom authorization server. Refresh token: yes`);
-    expect(html).not.toContain("rt-secret-123");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/");
 
     const cookie = res.headers.get("set-cookie")!;
     expect(cookie).toMatch(/^poc_sid=[0-9a-f-]{36}/);
@@ -195,6 +195,14 @@ describe("GET /oidc/callback", () => {
     const sid = cookie.match(/poc_sid=([^;]+)/)![1];
     const me = await h.app.request(`${BASE}/me`, { headers: { cookie: `poc_sid=${sid}` } });
     expect(await me.json()).toEqual({ email: EMAIL, app: "oidc" });
+
+    // The home page shows the profile and access token, but never the refresh token.
+    const home = await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text();
+    expect(home).toContain(`Welcome, ${EMAIL}`);
+    expect(home).toContain("custom authorization server");
+    expect(home).toContain("at-visible-456");
+    expect(home).toContain("Refresh token: issued");
+    expect(home).not.toContain("rt-secret-123");
   });
 
   it("sends the code, verifier, redirect URI, and Basic client credentials to the token endpoint", async () => {
@@ -218,8 +226,12 @@ describe("GET /oidc/callback", () => {
   it("records 'Refresh token: no' when none was issued", async () => {
     const { state, nonce } = await startFlow("org");
     idp.tokenResponse = async () => new Response(JSON.stringify({ id_token: await idToken(idp, { nonce, iss: ORG }) }));
-    const html = await (await callback({ code: "C", state })).text();
-    expect(html).toContain("via org authorization server. Refresh token: no");
+    const res = await callback({ code: "C", state });
+    expect(res.status).toBe(302);
+    const sid = res.headers.get("set-cookie")!.match(/poc_sid=([^;]+)/)![1];
+    const home = await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text();
+    expect(home).toContain("org authorization server");
+    expect(home).toContain("Refresh token: not issued");
     expect(await h.store.getEscrowRefreshToken("org", EMAIL)).toBeNull();
   });
 
@@ -228,7 +240,7 @@ describe("GET /oidc/callback", () => {
 
     const { state, nonce } = await startFlow();
     idp.tokenResponse = async () => new Response(JSON.stringify({ id_token: await idToken(idp, { nonce }) }));
-    expect((await callback({ code: "C", state })).status).toBe(200);
+    expect((await callback({ code: "C", state })).status).toBe(302);
     expect((await callback({ code: "C", state })).status).toBe(400);
   });
 
@@ -289,7 +301,7 @@ describe("GET /oidc/callback", () => {
     // First call to load keys happens with the old key set; a token signed by a new kid forces a refetch.
     const { state: s1, nonce: n1 } = await startFlow();
     idp.tokenResponse = async () => new Response(JSON.stringify({ id_token: await idToken(idp, { nonce: n1 }) }));
-    expect((await callback({ code: "C", state: s1 })).status).toBe(200);
+    expect((await callback({ code: "C", state: s1 })).status).toBe(302);
 
     const rotated = await makeKey("idp-kid-2");
     const before = idp.calls.filter((c) => c.url.endsWith("/v1/keys")).length;
@@ -306,7 +318,7 @@ describe("GET /oidc/callback", () => {
 
     const { state: s2, nonce: n2 } = await startFlow();
     idp.tokenResponse = async () => new Response(JSON.stringify({ id_token: await idToken(idp, { nonce: n2 }) }));
-    expect((await callback({ code: "C", state: s2 })).status).toBe(200);
+    expect((await callback({ code: "C", state: s2 })).status).toBe(302);
     expect(idp.calls.filter((c) => c.url.endsWith("/v1/keys")).length).toBe(before + 1);
   });
 });
@@ -361,6 +373,52 @@ describe("POST /test/refresh", () => {
     await h.store.putEscrowRefreshToken("custom", EMAIL, "rt");
     await h.store.deleteAppTokens(EMAIL);
     expect(await h.store.getEscrowRefreshToken("custom", EMAIL)).toBe("rt");
+  });
+});
+
+describe("GET / (Acme home page)", () => {
+  it("shows a sign-in button when there is no session", async () => {
+    const res = await h.app.request(`${BASE}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const html = await res.text();
+    expect(html).toContain("Acme");
+    expect(html).toContain('href="/oidc/login"');
+    expect(html).not.toContain("Your session has ended");
+  });
+
+  it("says the session ended once a GTR call revoked it, and offers sign-in again", async () => {
+    const sid = await h.store.createSession("oidc", EMAIL, { profile: { email: EMAIL }, accessToken: "tok" });
+    expect(await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text()).toContain(`Welcome, ${EMAIL}`);
+    await h.store.revokeSessions("oidc", EMAIL);
+    const html = await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text();
+    expect(html).toContain("Your session has ended");
+    expect(html).toContain('href="/oidc/login"');
+    expect(html).not.toContain("tok");
+  });
+
+  it("escapes claim values and the access token", async () => {
+    const sid = await h.store.createSession("oidc", EMAIL, { profile: { name: "<script>alert(1)</script>" }, accessToken: "</textarea><b>x" });
+    const html = await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text();
+    expect(html).not.toContain("<script>alert(1)");
+    expect(html).not.toContain("</textarea><b>");
+  });
+
+  it("a session made without sign-in details still renders", async () => {
+    const sid = await h.store.createSession("oidc", EMAIL);
+    const html = await (await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).text();
+    expect(html).toContain(`Welcome, ${EMAIL}`);
+    expect(html).toContain("No access token is stored");
+  });
+
+  it("a refresh after sign-in works: the home page does not depend on the callback state", async () => {
+    const { state, nonce } = await startFlow();
+    idp.tokenResponse = async () => new Response(JSON.stringify({ id_token: await idToken(idp, { nonce }), access_token: "a" }));
+    const res = await callback({ code: "C", state });
+    const sid = res.headers.get("set-cookie")!.match(/poc_sid=([^;]+)/)![1];
+    for (let i = 0; i < 2; i++) {
+      expect((await h.app.request(`${BASE}/`, { headers: { cookie: `poc_sid=${sid}` } })).status).toBe(200);
+    }
   });
 });
 

@@ -4,6 +4,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import { createLocalJWKSet, errors, jwtVerify, type JSONWebKeySet } from "jose";
 import type { AppDeps } from "./create-app.js";
 import { isOidcConfigured } from "./config.js";
+import { homePage } from "./pages.js";
 import type { AuthServer } from "./store.js";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -141,7 +142,7 @@ export function createOidcClient(deps: AppDeps) {
       } catch {
         throw new OidcError("token_request_failed");
       }
-      const body = (await res.json().catch(() => null)) as { id_token?: unknown; refresh_token?: unknown } | null;
+      const body = (await res.json().catch(() => null)) as { id_token?: unknown; refresh_token?: unknown; access_token?: unknown } | null;
       if (!res.ok || typeof body?.id_token !== "string") throw new OidcError("token_exchange_failed");
 
       let claims;
@@ -165,6 +166,8 @@ export function createOidcClient(deps: AppDeps) {
         sub: claims.sub,
         as: pkce.as,
         refreshToken: typeof body.refresh_token === "string" ? body.refresh_token : null,
+        accessToken: typeof body.access_token === "string" ? body.access_token : null,
+        claims: claims as Record<string, unknown>,
       };
     },
 
@@ -236,20 +239,32 @@ export function registerOidcRoutes(app: Hono, deps: AppDeps, oidc: OidcClient): 
       throw err;
     }
 
-    const { email, sub, as, refreshToken } = result;
+    const { email, sub, as, refreshToken, accessToken, claims } = result;
     await deps.store.registerUser(email, sub, as);
-    const sid = await deps.store.createSession("oidc", email);
+    const sid = await deps.store.createSession("oidc", email, {
+      profile: claims,
+      ...(accessToken ? { accessToken } : {}),
+      hasRefreshToken: Boolean(refreshToken),
+      authServer: as,
+    });
     if (refreshToken) {
       await deps.store.putAppTokens(as, email, refreshToken);
       await deps.store.putEscrowRefreshToken(as, email, refreshToken);
     }
     setCookie(c, SESSION_COOKIE, sid, { httpOnly: true, secure: true, sameSite: "Lax", path: "/" });
-    return c.html(
-      page(`Signed in as ${esc(email)} via ${as} authorization server. Refresh token: ${refreshToken ? "yes" : "no"}`),
-    );
+    // Redirect to the home page so a refresh reloads it; the callback URL's state is single-use.
+    return c.redirect("/", 302);
+  });
+
+  app.get("/", async (c) => {
+    c.header("cache-control", "no-store");
+    const sid = getCookie(c, SESSION_COOKIE);
+    const session = sid ? await deps.store.getSession(sid) : null;
+    return c.html(homePage({ session, sessionEnded: Boolean(sid) && !session }));
   });
 
   app.get("/me", async (c) => {
+    c.header("cache-control", "no-store");
     const sid = getCookie(c, SESSION_COOKIE);
     const session = sid ? await deps.store.getSession(sid) : null;
     if (!session) return c.json({ error: "no_session" }, 401);

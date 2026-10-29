@@ -28,7 +28,17 @@ export interface PkceData {
   as: AuthServer;
 }
 
-export interface SessionInfo {
+/** What the home page shows after sign-in. Optional: sessions made by /test/seed carry none of it. */
+export interface SessionDetails {
+  /** Claims from the verified ID token. */
+  profile?: Record<string, unknown>;
+  /** The access token Okta issued at sign-in, shown to the signed-in user. */
+  accessToken?: string;
+  hasRefreshToken?: boolean;
+  authServer?: AuthServer;
+}
+
+export interface SessionInfo extends SessionDetails {
   app: AppKey;
   email: string;
 }
@@ -41,7 +51,7 @@ export interface Store {
   isKnownUser(email: string): Promise<boolean>;
   emailBySub(sub: string): Promise<string | null>;
 
-  createSession(app: AppKey, email: string): Promise<string>;
+  createSession(app: AppKey, email: string, details?: SessionDetails): Promise<string>;
   getSession(sid: string): Promise<SessionInfo | null>;
   countSessions(email: string): Promise<Record<AppKey, number>>;
   revokeSessions(app: AppKey, email: string): Promise<number>;
@@ -129,9 +139,9 @@ export class MemoryStore implements Store {
     return this.subs.get(sub) ?? null;
   }
 
-  async createSession(app: AppKey, email: string): Promise<string> {
+  async createSession(app: AppKey, email: string, details: SessionDetails = {}): Promise<string> {
     const sid = randomUUID();
-    this.sessions.set(sid, { app, email: lower(email) });
+    this.sessions.set(sid, { ...details, app, email: lower(email) });
     return sid;
   }
 
