@@ -95,7 +95,7 @@ export function registerGtrRoutes(app: Hono, deps: AppDeps): void {
       audience,
       expectedSub: expectedSubFor(name, deps.config),
     });
-    if (auth.outcome !== "ok") return respond(auth.status, { auth: auth.outcome });
+    if (auth.outcome !== "ok") return respond(auth.status, { auth: auth.outcome, ...(auth.rejected ? { rejected: auth.rejected } : {}) });
 
     // 3. Body.
     let body: unknown;

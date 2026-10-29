@@ -20,6 +20,8 @@ export interface CallRecord {
   status: number;
   sessionsRevoked: number;
   durationMs: number;
+  /** Set on a 403: the token's scope and client claims next to what the mock expected. */
+  rejected?: Record<string, unknown>;
 }
 
 export interface PkceData {

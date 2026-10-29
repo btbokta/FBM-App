@@ -9,6 +9,8 @@ export interface AuthResult {
   outcome: AuthOutcome;
   /** HTTP status to answer with when outcome is not "ok". */
   status: 200 | 401 | 403;
+  /** Why a 403 was given: the claims that mattered, never the token. Shown in /test/calls to debug a rejected token. */
+  rejected?: { scp: unknown; cid: unknown; aud: unknown; iss: unknown; expectedScope: string; expectedCid: string | null };
 }
 
 export interface AuthDeps {
@@ -93,8 +95,19 @@ export async function validateGtrBearer(
     return invalid;
   }
   const scopes = Array.isArray(payload.scp) ? payload.scp : [];
-  if (!scopes.includes(cfg.LOGOUT_SCOPE)) return forbidden;
-  if (!cfg.DISPATCHER_CLIENT_ID || payload.cid !== cfg.DISPATCHER_CLIENT_ID) return forbidden;
+  if (!scopes.includes(cfg.LOGOUT_SCOPE) || !cfg.DISPATCHER_CLIENT_ID || payload.cid !== cfg.DISPATCHER_CLIENT_ID) {
+    return {
+      ...forbidden,
+      rejected: {
+        scp: payload.scp,
+        cid: payload.cid,
+        aud: payload.aud,
+        iss: payload.iss,
+        expectedScope: cfg.LOGOUT_SCOPE,
+        expectedCid: cfg.DISPATCHER_CLIENT_ID ?? null,
+      },
+    };
+  }
   return ok;
 }
 

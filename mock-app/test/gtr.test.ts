@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   BASE,
+  DISPATCHER,
   ISSUER,
   NOW_S,
   OIDC_CLIENT,
@@ -131,6 +132,24 @@ describe("403 authorization", () => {
   it("token issued to a different client", async () => {
     const res = await h.app.request(gtrRequest("oidc", await mint(h.key, { cid: "0oaSOMEONEELSE" }), emailBody(EMAIL)));
     expect(res.status).toBe(403);
+  });
+
+  it("a 403 records the token's scope and client claims next to what was expected, never the token", async () => {
+    const token = await mint(h.key, { scp: ["openid"], cid: "0oaSOMEONEELSE" });
+    expect((await h.app.request(gtrRequest("oidc", token, emailBody(EMAIL)))).status).toBe(403);
+    const call = (await lastCall()) as { rejected?: Record<string, unknown> };
+    expect(call.rejected).toMatchObject({
+      scp: ["openid"],
+      cid: "0oaSOMEONEELSE",
+      expectedScope: "poc.fbm.logout",
+      expectedCid: DISPATCHER,
+    });
+    expect(JSON.stringify(call)).not.toContain(token);
+  });
+
+  it("a 401 or an accepted call records no rejection detail", async () => {
+    expect(((await h.app.request(gtrRequest("oidc", "junk", emailBody(EMAIL)))).status)).toBe(401);
+    expect(await lastCall()).not.toHaveProperty("rejected");
   });
 
   it("scp as a plain string instead of an array, as Okta never issues it", async () => {
