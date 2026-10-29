@@ -51,22 +51,29 @@ describe("assertPreviewOrg", () => {
     expect(await codeOf(assertPreviewOrg({ OKTA_ORG_URL: ORG }, metadataFetch(good)))).toBe("ORG_URL_MISMATCH");
   });
 
-  it("aborts for an okta.com org without making a request", async () => {
+  it("accepts an okta.com org when the metadata matches", async () => {
+    const url = "https://acme.okta.com";
+    const meta = { id: "00oABC123", _links: { organization: { href: url } } };
+    const result = await assertPreviewOrg({ OKTA_ORG_URL: url, POC_EXPECTED_ORG_URL: url }, metadataFetch(meta));
+    expect(result).toEqual({ orgId: "00oABC123", orgUrl: url });
+  });
+
+  it("aborts for a host that isn't an Okta org without making a request", async () => {
     let called = false;
     const spy = (async () => {
       called = true;
       return new Response("{}");
     }) as typeof fetch;
-    const url = "https://acme.okta.com";
+    const url = "https://acme.example.com";
     const code = await codeOf(assertPreviewOrg({ OKTA_ORG_URL: url, POC_EXPECTED_ORG_URL: url }, spy));
-    expect(code).toBe("NOT_PREVIEW");
+    expect(code).toBe("NOT_OKTA_ORG");
     expect(called).toBe(false);
   });
 
   it("aborts for a non-https or lookalike host", async () => {
-    for (const url of ["http://acme.oktapreview.com", "https://oktapreview.com.evil.example", "https://acme-admin.oktapreview.com.evil.io"]) {
+    for (const url of ["http://acme.oktapreview.com", "https://oktapreview.com.evil.example", "https://acme-admin.oktapreview.com.evil.io", "https://okta.com.evil.example", "https://acme.okta.com.evil.io"]) {
       expect(await codeOf(assertPreviewOrg({ OKTA_ORG_URL: url, POC_EXPECTED_ORG_URL: url }, metadataFetch(good)))).toBe(
-        "NOT_PREVIEW",
+        "NOT_OKTA_ORG",
       );
     }
   });

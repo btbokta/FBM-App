@@ -3,7 +3,7 @@ import { redact } from "./redact.js";
 
 export type GuardCode =
   | "ORG_URL_MISMATCH"
-  | "NOT_PREVIEW"
+  | "NOT_OKTA_ORG"
   | "ORG_HREF_MISMATCH"
   | "ORG_ID_MISMATCH"
   | "ORG_UNREACHABLE";
@@ -20,10 +20,11 @@ export class GuardError extends Error {
 
 type GuardEnv = Pick<PocEnv, "OKTA_ORG_URL" | "POC_EXPECTED_ORG_URL" | "POC_EXPECTED_ORG_ID">;
 
-const PREVIEW_URL = /^https:\/\/[a-z0-9-]+\.oktapreview\.com$/;
+// Preview and production Okta hosts. Plan change 2026-10-28: the demo tenant is on okta.com.
+const OKTA_ORG_URL = /^https:\/\/[a-z0-9-]+\.(oktapreview|okta)\.com$/;
 const trimSlash = (s: string) => s.replace(/\/+$/, "");
 
-/** Aborts unless OKTA_ORG_URL is the one preview org this POC was configured for (F23). */
+/** Aborts unless OKTA_ORG_URL is the one Okta org this POC was configured for (F23). */
 export async function assertPreviewOrg(
   env: GuardEnv,
   fetchFn: typeof fetch = fetch,
@@ -39,8 +40,8 @@ export async function assertPreviewOrg(
       `OKTA_ORG_URL (${orgUrl}) differs from POC_EXPECTED_ORG_URL (${expectedUrl})`,
     );
   }
-  if (!PREVIEW_URL.test(orgUrl)) {
-    throw new GuardError("NOT_PREVIEW", `${orgUrl} is not an https://<name>.oktapreview.com org`);
+  if (!OKTA_ORG_URL.test(orgUrl)) {
+    throw new GuardError("NOT_OKTA_ORG", `${orgUrl} is not an https://<name>.okta.com or .oktapreview.com org`);
   }
 
   let metadata: { id?: unknown; _links?: { organization?: { href?: unknown } } };
