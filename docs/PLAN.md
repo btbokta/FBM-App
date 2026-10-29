@@ -130,12 +130,12 @@ Each item has a POC default and the task that settles it. The executor records t
 | U3 | The rule's `workflow_id` is the numeric flow ID in the Workflows console URL | P7-T1 | `itp.workflowIdMatchesUrl` |
 | U4 | The delegated-flow ORN uses the same flow ID | P7-T6 | `soc.ornWorks` |
 | U5 | The flow ID appears in the Workflows flow URL as `/flows/<number>` | P6-T5 | `wf.flowIdSource` |
-| U6 | A non-2xx response makes Raw Request error; inside If Error, the status code is at `code` on the error object (the If Error page lists `message`, `code`, `method`, `flo`, `execution`) | P6-T4 scenario S2 | `wf.rawRequestErrorStatusPath` |
+| U6 | A non-2xx response makes Raw Request error; inside If Error, the status code is at `statusCode` on the error object (observed 2026-10-28 on a 403 from a Raw Request: the object had `statusCode`, `headers`, `body`, and `message`, and no `code`; the If Error page lists `code`, which was absent) | P6-T4 scenario S2 | `wf.rawRequestErrorStatusPath` |
 | U7 | Search Rows (All matching rows) returns row objects keyed by column name (`Method`, `App name`, …) | P6-T4 scenario S1 | `wf.searchRowsRowShape` |
 | U8 | CSV import maps `true`/`false` into a Boolean column | P6-T1 | `wf.csvBooleanImport` |
 | U9 | The Okta ITP connection's default scopes let Global Token Revocation return 204, not 403 | P8-T1 | `t1.gtrStatus` |
 | U10 | Client Credentials is available on the custom authorization server in this org (see F22). If it isn't, the POC switches to a static bearer held in a Workflows connection | P3-T4, P3-T5 | `authz.clientCredentials` |
-| U11 | An API Connector Basic connection sends credentials the Okta token endpoint accepts as `client_secret_basic` | P6-T4 scenario S1 | `wf.tokenViaBasicConnection` |
+| U11 | An API Connector **Client Credentials** connection fetches a token from the custom authorization server and attaches it to Raw Request calls. Hand-tested 2026-10-28: the token request needs a classic-wizard service app with DPoP off (`invalid_dpop_proof_missing_header` otherwise) and an access policy rule; a Raw Request to `/userinfo` then returned `403 insufficient_scope` rather than a 401, which shows a valid token was attached. Still unverified: refresh after the token expires, and whether it fetches one token or one per call | P6-T4 scenario S1 | `wf.tokenViaClientCredentialsConnection` |
 | U12 | Session protection's Groups impacted and Run a workflow appear in the API as the `POST_AUTH_SESSION` rule's `conditions.people.groups.include` and `RUN_WORKFLOW` | P9-T3 | `sp.uiMapsToApi` |
 | U13 | A DENY rule for a network zone in the FBM apps' sign-in policy is enough for session protection to flag a violation after an IP change | P9-T4 (T3) | `t3.violationLogged` |
 | U14 | Session protection Status applies to the whole org (docs don't say; treated as org-wide) | Not tested; org is dedicated | — |
@@ -165,8 +165,8 @@ The guide leaves these open or the platform forces them. Each states the default
 | D-PROFILE | How the dispatcher gets the profile | Okta – Custom API Action `GET /api/v1/users/{id}` and Object – Get `profile`, so the Identifier attribute column holds the real Okta attribute name. The guide's Read User returns separate fields, not a profile object (F50) | — |
 | D-RESULTS | Where result rows are written | The per-app helper writes one Results row per attempt. For Each has no outputs (F45), and per-attempt rows show retries for T7 | — |
 | D-RETRY | Retry for 429 and 5xx | Per App calls itself with `Attempt + 1` after `Wait For` 2×Attempt seconds, up to 4 attempts (3 retries) (F47). Card-level retry covers 429 only (F46) | T7 shows recursion problems (U21) |
-| D-TOKEN | Dispatcher token | Always fetch one token per run through an API Connector Basic connection that holds the dispatcher client secret, so no secret sits in a flow card | U10 fails → D-AUTH |
-| D-AUTH | GTR endpoint auth | `GTR_AUTH_MODE=oauth`: client-credentials JWT with scope `poc.fbm.logout`, `cid` = dispatcher client | P3-T5 finds Client Credentials unavailable → `static`: a random bearer held in a Custom Header connection |
+| D-TOKEN | GTR bearer token | An API Connector **Client Credentials** connection (Access Token Path = the custom authorization server's `/v1/token`, plus the dispatcher client ID and secret) fetches and attaches the token on every Per App GTR call. The dispatcher fetches no token and passes none to Per App, and no secret sits in a flow card. Replaces the earlier Basic connection plus Dispatcher C7 (plan change 2026-10-28) | U10 fails → D-AUTH; U11 fails (token not refreshed after expiry) → restore Dispatcher C7 with a Basic connection |
+| D-AUTH | GTR endpoint auth | `GTR_AUTH_MODE=oauth`: client-credentials JWT with the logout scope (`poc.fbm.logout` on `POC-FBM-AS` in a preview org; `fbm.logout` on the `default` server if the org's own server is used), `cid` = dispatcher client | P3-T5 finds Client Credentials unavailable → `static`: a random bearer held in a Custom Header connection |
 | D-GUARD | Respond flow target and guard | Decided by the probe (U1): outcome A, B, C1, or C2, as defined in [wf-03](build-sheets/wf-03-respond.md). Every flow refuses the Workflows connection account | C1 → the SOC uses only the email wrapper; C2 → blocked, plan change |
 | D-SAML | SAML sign-in | The mock doesn't implement SAML sign-in. The SAML app exists with FBM and a registry row; the harness seeds SAML sessions | — |
 | D-T5 | Which tokens T5 tests | Both: custom authorization server (what in-house apps use) and org authorization server | — |
@@ -784,7 +784,7 @@ Mock app contract (applies to P2-T1 – P2-T4):
      - The policies have the expected client whitelists.
      - The dispatcher rule grants only `client_credentials` (skipped when unavailable).
   5. `check` subcommand `cc-token` (used by P3-T5):
-     1. POST `{issuer}/v1/token` with Basic `dispatcher_client_id:dispatcher_client_secret` (from `getOutputs()`), `grant_type=client_credentials`, `scope=poc.fbm.logout`.
+     1. POST `{issuer}/v1/token` with Basic `dispatcher_client_id:dispatcher_client_secret` (from `getOutputs()`), `grant_type=client_credentials`, `scope=poc.fbm.logout`. This script check is separate from the Workflows connection (D-TOKEN), which sends the same client's credentials from its own form. **Observed 2026-10-28 (hand-built client in another org):** a service app made with the new API Services wizard failed with "This client cannot use a custom authorization server"; one made with the classic wizard worked; and a Workflows Client Credentials connection failed with `invalid_dpop_proof_missing_header` until DPoP was turned off. Terraform's `okta_app_oauth` sets `dpop_bound_access_tokens = false`, but it is unverified that a Terraform-created service app behaves like the classic-wizard one. If `cc-token` fails with "cannot use a custom authorization server", report it rather than switching to static mode.
      2. Expect 200.
      3. Verify the access token against `{issuer}/v1/keys`: `iss` = issuer, `aud` = `api://poc-fbm-logout`, `scp` includes `poc.fbm.logout`, `cid` = dispatcher client ID.
      4. Never print the token.
@@ -1138,7 +1138,7 @@ Run record schema (P5-T2) used by every test: `{ test, runId, startedAt, finishe
   1. The executor shows wf-00 and stops.
   2. The human reports the registry row count and Enabled values, each connection's status, and anything that differed from the sheet.
   3. The executor records `wf.csvBooleanImport`.
-- **Acceptance check:** the human reports 4 registry rows with Enabled `true, true, true, false`, empty Results and Probe tables, and connections `POC-Okta`, `POC-Okta ITP`, `POC-API None`, `POC-Mock Vendor (Custom Header)`, plus `POC-AS Token (Basic)` (oauth mode) or `POC-Mock GTR Static (Custom Header)` (static mode), all showing as connected.
+- **Acceptance check:** the human reports 4 registry rows with Enabled `true, true, true, false`, empty Results and Probe tables, and connections `POC-Okta`, `POC-Okta ITP`, `POC-Mock Vendor (Custom Header)`, plus `POC-GTR Client Credentials` (oauth mode) or `POC-Mock GTR Static (Custom Header)` (static mode), all showing as connected. `POC-API None` and `POC-AS Token (Basic)` are no longer created.
 - **Rollback:** delete the folder, tables, and connections (ac-09).
 
 #### P6-T2 Build POC-FBM Logout – Per App
@@ -1162,17 +1162,17 @@ Run record schema (P5-T2) used by every test: `{ test, runId, startedAt, finishe
 #### P6-T4 Dispatcher scenarios S1–S3
 - **Owner:** VERIFY
 - **Depends on:** P6-T3, P5-T2
-- **Goal:** Prove the dispatcher and per-app helper, settle U6, U7, and U11, and fix the sheet paths if needed.
+- **Goal:** Prove the dispatcher and per-app helper, settle U6, U7, and U11 (including token refresh after expiry), and fix the sheet paths if needed.
 - **Inputs:** wf-02 "Testing"; user `02`.
 - **Steps:**
   1. For S1, then S2, then S3:
      1. Run `npm run check -- dispatcher-prep --user 02 --scenario <S>`.
      2. Relay the printed user ID and wf-02 "Testing" steps to the human and wait.
      3. Run `npm run check -- dispatcher-verify --user 02 --scenario <S>`.
-  2. After S1, ask the human for the Search Rows row object shape (wf-02 Testing, S1) and record `wf.searchRowsRowShape` and `wf.tokenViaBasicConnection` (or `static`).
+  2. After S1, ask the human for the Search Rows row object shape (wf-02 Testing, S1) and record `wf.searchRowsRowShape` and `wf.tokenViaClientCredentialsConnection` (or `static`).
   3. After S2, ask the human for the Results row status for SAML (expect 422) and for the If Error object (wf-01 C8.6 note). Record `wf.rawRequestErrorStatusPath`.
-  4. If the path isn't `code` or the row shape isn't flat, update wf-01 (C3, C5–C7, C8.6.2, C8.7.4.2) to the recorded paths, commit as `P6-T4: correct wf-01 paths`, ask the human to apply the edit, and rerun the failing scenario.
-- **Acceptance check:** `dispatcher-verify` passes for S1, S2, and S3, and findings `wf.searchRowsRowShape`, `wf.rawRequestErrorStatusPath`, and `wf.tokenViaBasicConnection` are set.
+  4. If the path isn't `statusCode` or the row shape isn't flat, update wf-01 (C3, C5–C7, C8.6.2, C8.7.4.2) to the recorded paths, commit as `P6-T4: correct wf-01 paths`, ask the human to apply the edit, and rerun the failing scenario.
+- **Acceptance check:** `dispatcher-verify` passes for S1, S2, and S3, and findings `wf.searchRowsRowShape`, `wf.rawRequestErrorStatusPath`, and `wf.tokenViaClientCredentialsConnection` are set.
 - **Rollback:** none.
 
 #### P6-T5 Build POC-ITP FBM – Respond (probe version)
